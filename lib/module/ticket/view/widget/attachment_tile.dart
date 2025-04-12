@@ -6,18 +6,50 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../model/ticket_conversation_list.response.dart';
+import 'full_screen_image_view.dart';
 
 class AttachmentTile extends StatelessWidget {
   final ConversationUIModel? conversation;
 
   const AttachmentTile({Key? key, this.conversation}) : super(key: key);
 
+// download image
   Future<void> _downloadImage(BuildContext context, String imageUrl) async {
     try {
+      // Check Android version to determine which permissions to request
+      if (Platform.isAndroid) {
+        // Request appropriate permissions based on Android version
+        bool permissionGranted = await _requestStoragePermission(context);
+        if (!permissionGranted) {
+          return; // Exit if permission not granted
+        }
+      }
+
+      // Show loading indicator
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white)),
+                SizedBox(width: 10),
+                Text("Downloading image..."),
+              ],
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      // Download the image
       final response = await http.get(Uri.parse(imageUrl));
       if (response.statusCode == 200) {
+        // Save the image
         final result = await ImageGallerySaver.saveImage(
           response.bodyBytes,
           quality: 100,
@@ -25,26 +57,28 @@ class AttachmentTile extends StatelessWidget {
         );
 
         if (result['isSuccess']) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: Colors.green, // Background color of the snackbar
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle_outline,
-                      color: Colors.white), // Icon for success
-                  SizedBox(width: 10),
-                  Text("Image downloaded successfully",
-                      style: TextStyle(color: Colors.white)),
-                ],
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: Colors.green,
+                content: const Row(
+                  children: [
+                    Icon(Icons.check_circle_outline, color: Colors.white),
+                    SizedBox(width: 10),
+                    Text(
+                      "Image downloaded successfully",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+                duration: const Duration(seconds: 3),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              duration: Duration(
-                  seconds: 3), // How long the snackbar will be displayed
-              behavior: SnackBarBehavior.floating, // Floating snackbar design
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
+            );
+          }
         } else {
           throw Exception("Failed to save image");
         }
@@ -52,101 +86,128 @@ class AttachmentTile extends StatelessWidget {
         throw Exception("Failed to download image");
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error downloading image: $e")),
-      );
-    }
-  }
-
-  Future<void> _openFile(BuildContext context, String fileUrl) async {
-    try {
-      if (await canLaunch(fileUrl)) {
-        await launch(fileUrl);
-      } else {
-        final result = await OpenFile.open(fileUrl);
-        if (result.type != ResultType.done) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Cannot open file: ${result.message}")),
-          );
-        }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error downloading image: $e")),
+        );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error opening file: $e")),
-      );
     }
   }
 
   Future<void> _downloadFile(BuildContext context, String fileUrl) async {
     try {
-      // Request storage permission
-      var status = await Permission.storage.request();
-      if (status.isGranted) {
-        // Start download
-        final response = await http.get(Uri.parse(fileUrl));
-        if (response.statusCode == 200) {
-          // Get the download directory
-          Directory? directory;
-          if (Platform.isAndroid) {
+      // Check Android version to determine which permissions to request
+      if (Platform.isAndroid) {
+        // Request appropriate permissions based on Android version
+        bool permissionGranted = await _requestStoragePermission(context);
+        if (!permissionGranted) {
+          return; // Exit if permission not granted
+        }
+      }
+
+      // Show loading indicator
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white)),
+                SizedBox(width: 10),
+                Text("Downloading file..."),
+              ],
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      // Start download
+      final response = await http.get(Uri.parse(fileUrl));
+      if (response.statusCode == 200) {
+        // Get the download directory
+        Directory? directory;
+        if (Platform.isAndroid) {
+          try {
+            // Try to use the Download directory first
             directory = Directory('/storage/emulated/0/Download');
-          } else {
+            if (!await directory.exists()) {
+              // If it doesn't exist, fall back to app documents directory
+              directory = await getApplicationDocumentsDirectory();
+            }
+          } catch (e) {
+            // If there's any issue, fall back to app documents directory
             directory = await getApplicationDocumentsDirectory();
           }
+        } else {
+          directory = await getApplicationDocumentsDirectory();
+        }
 
-          // Create file name
-          String fileName = fileUrl.split('/').last;
-          String filePath = '${directory.path}/$fileName';
+        // Create file name
+        String fileName = fileUrl.split('/').last;
+        String filePath = '${directory.path}/$fileName';
 
-          // Write the file
-          File file = File(filePath);
-          await file.writeAsBytes(response.bodyBytes);
+        // Write the file
+        File file = File(filePath);
+        await file.writeAsBytes(response.bodyBytes);
 
-          debugPrint("File downloaded to: $filePath");
-          OpenFile.open(filePath);
+        debugPrint("File downloaded to: $filePath");
 
+        // Try to open the file
+        try {
+          await OpenFile.open(filePath);
+        } catch (e) {
+          debugPrint("Could not open file: $e");
+          // Continue anyway as the file is still downloaded
+        }
+
+        if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: Colors.green,
-              content: Expanded(
-                child: Column(
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.check_circle_outline, color: Colors.white),
-                        SizedBox(width: 10),
-                        Text(
-                          "File downloaded successfully to",
-                          style: TextStyle(color: Colors.white),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                    Text(
-                      filePath,
-                      maxLines: 3,
-                      style: TextStyle(color: Colors.white),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.check_circle_outline, color: Colors.white),
+                      SizedBox(width: 10),
+                      Text(
+                        "File downloaded successfully to",
+                        style: TextStyle(color: Colors.white),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                  Text(
+                    filePath,
+                    maxLines: 3,
+                    style: const TextStyle(color: Colors.white),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 3),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
           );
-        } else {
-          throw Exception("Failed to download file");
         }
       } else {
-        throw Exception("Storage permission not granted");
+        throw Exception("Failed to download file");
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error downloading file: $e")),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error downloading file: $e")),
+        );
+      }
     }
   }
 
@@ -168,47 +229,66 @@ class AttachmentTile extends StatelessWidget {
   }
 
   Widget _buildImageAttachment(BuildContext context) {
+    // Generate a unique hero tag for this image
+    final String heroTag =
+        'image-${conversation?.attachmentUrl ?? conversation?.localFilePath ?? DateTime.now().millisecondsSinceEpoch}';
+
     return Stack(
       alignment: Alignment.topRight,
       children: [
-        // Check if it's a local file or a remote URL
-        // First check if we have a localFilePath, otherwise use attachmentUrl
-        (conversation!.localFilePath != null &&
-                conversation!.localFilePath!.isNotEmpty)
-            ? Image.file(
-                File(conversation!.localFilePath!),
-                errorBuilder: (context, error, stackTrace) {
-                  debugPrint("Error loading local image: $error");
-                  return const Text("Error loading image");
-                },
-              )
-            : Image.network(
-                conversation!.attachmentUrl!,
-                errorBuilder: (context, error, stackTrace) {
-                  debugPrint("Error loading network image: $error");
-                  return const Text("Error loading image");
-                },
-                loadingBuilder: (BuildContext context, Widget child,
-                    ImageChunkEvent? loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                          : null,
-                    ),
-                  );
-                },
+        // Wrap the image in a GestureDetector to handle taps
+        GestureDetector(
+          onTap: () {
+            // Navigate to full screen view when image is tapped
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => FullScreenImageView(
+                  imageUrl: conversation?.attachmentUrl,
+                  localFilePath: conversation?.localFilePath,
+                  heroTag: heroTag,
+                ),
               ),
+            );
+          },
+          child: Hero(
+            tag: heroTag,
+            child: (conversation!.localFilePath != null &&
+                    conversation!.localFilePath!.isNotEmpty)
+                ? Image.file(
+                    File(conversation!.localFilePath!),
+                    errorBuilder: (context, error, stackTrace) {
+                      debugPrint("Error loading local image: $error");
+                      return const Text("Error loading image");
+                    },
+                  )
+                : Image.network(
+                    conversation!.attachmentUrl!,
+                    errorBuilder: (context, error, stackTrace) {
+                      debugPrint("Error loading network image: $error");
+                      return const Text("Error loading image");
+                    },
+                    loadingBuilder: (BuildContext context, Widget child,
+                        ImageChunkEvent? loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ),
+        // Download button
         Positioned(
           top: 8,
           right: 8,
           child: GestureDetector(
-            onTap: () => (conversation!.localFilePath != null &&
-                    conversation!.localFilePath!.isNotEmpty)
-                ? _openLocalFile(context, conversation!.localFilePath!)
-                : _downloadImage(context, conversation!.attachmentUrl!),
+            onTap: () => _downloadImage(context, conversation!.attachmentUrl!),
             child: const CircleAvatar(
               radius: 20,
               backgroundColor: Colors.blue,
@@ -256,32 +336,6 @@ class AttachmentTile extends StatelessWidget {
     );
   }
 
-  // Helper method to check if a path is a local file
-  bool _isLocalFile(String path) {
-    return path.startsWith('/') ||
-        path.startsWith('file://') ||
-        path.contains('/data/') ||
-        path.contains('/storage/');
-  }
-
-  // Open a local file
-  Future<void> _openLocalFile(BuildContext context, String filePath) async {
-    try {
-      final result = await OpenFile.open(filePath);
-      if (result.type != ResultType.done && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Cannot open file: ${result.message}")),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error opening file: $e")),
-        );
-      }
-    }
-  }
-
   IconData _getFileIcon(String? attachmentUrl) {
     if (attachmentUrl == null) return Icons.insert_drive_file;
 
@@ -317,5 +371,83 @@ class AttachmentTile extends StatelessWidget {
       default:
         return Icons.insert_drive_file;
     }
+  }
+
+  // Request storage permission based on Android version
+  Future<bool> _requestStoragePermission(BuildContext context) async {
+    // For Android 13+ (API level 33+)
+    if (Platform.isAndroid) {
+      try {
+        // Try multiple permission approaches
+        // First try storage permission
+        var storageStatus = await Permission.storage.status;
+        if (!storageStatus.isGranted) {
+          storageStatus = await Permission.storage.request();
+        }
+
+        // If storage permission is granted, return true
+        if (storageStatus.isGranted) {
+          return true;
+        }
+
+        // If we're here, storage permission was denied
+        // Try external storage permission
+        var externalStorageStatus =
+            await Permission.manageExternalStorage.status;
+        if (!externalStorageStatus.isGranted) {
+          externalStorageStatus =
+              await Permission.manageExternalStorage.request();
+        }
+
+        // If external storage permission is granted, return true
+        if (externalStorageStatus.isGranted) {
+          return true;
+        }
+
+        // If we're here, both permissions were denied
+        // Show explanation dialog
+        if (context.mounted) {
+          _showPermissionExplanationDialog(context);
+        }
+        return false;
+      } catch (e) {
+        debugPrint("Error requesting permissions: $e");
+        return false;
+      }
+    }
+
+    // For non-Android platforms, return true
+    return true;
+  }
+
+  // Show a dialog explaining why we need storage permission
+  void _showPermissionExplanationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Storage Permission Required'),
+          content: const Text(
+              'To download files and images, this app needs permission to access your device storage. '
+              'Please grant storage permission in the app settings.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                // Open app settings so user can enable permission
+                await openAppSettings();
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
