@@ -50,19 +50,22 @@ dependencies:
   get: ^4.6.6
   flutter_screenutil:
   intl: ^0.19.0
-  image_picker: 
-  file_picker: 
+  image_picker:
+  file_picker:
   firebase_core: ^2.27.0
-  firebase_messaging: 
-  app_settings: 
+  firebase_messaging:
+  app_settings:
   cached_network_image:
   url_launcher:
   flutter_pdfview:
-  path_provider: 
-  permission_handler: 
+  path_provider:
+  permission_handler:
   open_file:
   image_gallery_saver:
   win32: ^5.5.1 # Downgraded for compatibility
+  just_audio: ^0.9.36
+  audio_session: ^0.1.18
+  flutter_spinkit: ^5.2.0
 
 dev_dependencies:
   flutter_test:

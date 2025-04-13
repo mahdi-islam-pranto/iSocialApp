@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../model/ticket_conversation_list.response.dart';
 import 'full_screen_image_view.dart';
+import 'audio_player_widget.dart';
 
 class AttachmentTile extends StatelessWidget {
   final ConversationUIModel? conversation;
@@ -93,6 +94,8 @@ class AttachmentTile extends StatelessWidget {
       }
     }
   }
+
+  // download file
 
   Future<void> _downloadFile(BuildContext context, String fileUrl) async {
     try {
@@ -218,14 +221,28 @@ class AttachmentTile extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    // Check if it's an image
     if (conversation?.attachmentType == "image") {
       return _buildImageAttachment(context);
-    } else if (conversation?.attachmentType != null &&
+    }
+    // Check if it's an audio file
+    else if (_isAudioFile(conversation?.attachmentUrl)) {
+      return _buildAudioAttachment(context);
+    }
+    // Handle other file types
+    else if (conversation?.attachmentType != null &&
         conversation?.attachmentType != "text") {
       return _buildFileAttachment(context);
     } else {
       return const SizedBox.shrink();
     }
+  }
+
+  // Check if the file is an audio file based on extension
+  bool _isAudioFile(String? url) {
+    if (url == null) return false;
+    String extension = url.split('.').last.toLowerCase();
+    return ['mp3', 'wav', 'ogg', 'm4a', 'aac'].contains(extension);
   }
 
   Widget _buildImageAttachment(BuildContext context) {
@@ -300,6 +317,14 @@ class AttachmentTile extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAudioAttachment(BuildContext context) {
+    String fileName = conversation!.attachmentUrl!.split('/').last;
+    return AudioPlayerWidget(
+      audioUrl: conversation!.attachmentUrl!,
+      fileName: fileName,
     );
   }
 
