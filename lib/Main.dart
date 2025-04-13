@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:isocial/firebase_options.dart';
 import 'package:isocial/storage/sharedPrefs.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:video_player/video_player.dart';
 import 'package:provider/provider.dart';
 import 'controllers/Controller.dart';
 import 'SplashScreen.dart';
@@ -35,9 +36,21 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Initialize audio session for the app
-  final audioPlayer = AudioPlayer();
-  await audioPlayer.dispose();
+  // Initialize audio and video players for the app
+  try {
+    // Initialize audio player
+    final audioPlayer = AudioPlayer();
+    await audioPlayer.dispose();
+
+    // Initialize video player
+    final videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(
+        'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4'));
+    await videoPlayerController.initialize();
+    await videoPlayerController.dispose();
+  } catch (e) {
+    debugPrint('Error initializing media players: $e');
+    // Continue anyway as this is just a pre-initialization
+  }
 
   runApp(const MyApp());
 }

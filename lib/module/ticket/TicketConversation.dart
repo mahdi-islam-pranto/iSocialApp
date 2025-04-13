@@ -8,6 +8,7 @@ import 'package:isocial/module/ticket/controller/ticket_controller.dart';
 import 'package:isocial/module/ticket/dispositon/TemplateDisposition.dart';
 import 'package:isocial/module/ticket/dispositon/TypeDisposition.dart';
 import 'package:isocial/module/ticket/dispositon/DispositonController.dart';
+import 'package:isocial/module/ticket/view/widget/attachment_preview_dialog.dart';
 import 'package:isocial/module/ticket/view/widget/own_message_tile.dart';
 import 'package:isocial/module/ticket/view/widget/user_message_tile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -460,10 +461,23 @@ class _TicketConversationState extends State<TicketConversation> {
 
     if (image != null) {
       File file = File(image.path);
-      debugPrint('Picked image: ${file.path}');
+      debugPrint('Picked image from gallery: ${file.path}');
 
-      // Call the attachmentReplay function
-      attachmentReplay(file);
+      // Show preview dialog instead of sending immediately
+      _showAttachmentPreviewDialog(file);
+    }
+  }
+
+  Future<void> _captureImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+
+    if (image != null) {
+      File file = File(image.path);
+      debugPrint('Captured image: ${file.path}');
+
+      // Show preview dialog instead of sending immediately
+      _showAttachmentPreviewDialog(file);
     }
   }
 
@@ -497,9 +511,8 @@ class _TicketConversationState extends State<TicketConversation> {
         String fileExtension = fileName.split('.').last.toLowerCase();
         debugPrint('Picked file: ${file.path}, extension: $fileExtension');
 
-        // We'll let the attachmentReplay function handle adding the file to the conversation
-        // This avoids duplicate entries in the conversation list
-        attachmentReplay(file);
+        // Show preview dialog instead of sending immediately
+        _showAttachmentPreviewDialog(file);
       } else {
         debugPrint('No file selected or file path is null');
       }
@@ -522,19 +535,35 @@ class _TicketConversationState extends State<TicketConversation> {
           content: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
+              // Camera option
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
                     icon: const Icon(Icons.camera_alt, size: 30),
                     onPressed: () {
+                      _captureImage();
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  const Text('Camera')
+                ],
+              ),
+              // Gallery option
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.photo_library, size: 30),
+                    onPressed: () {
                       _pickImage();
                       Navigator.of(context).pop();
                     },
                   ),
-                  const Text('Image')
+                  const Text('Gallery')
                 ],
               ),
+              // File attachment option
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -545,11 +574,32 @@ class _TicketConversationState extends State<TicketConversation> {
                       Navigator.of(context).pop();
                     },
                   ),
-                  const Text('Attachment')
+                  const Text('File')
                 ],
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  void _showAttachmentPreviewDialog(File file) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AttachmentPreviewDialog(
+          file: file,
+          onConfirm: () {
+            Navigator.of(context).pop();
+            // Send the attachment if confirmed
+            attachmentReplay(file);
+          },
+          onCancel: () {
+            Navigator.of(context).pop();
+            // Do nothing if canceled
+          },
         );
       },
     );

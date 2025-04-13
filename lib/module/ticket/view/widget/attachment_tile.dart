@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../model/ticket_conversation_list.response.dart';
 import 'full_screen_image_view.dart';
 import 'audio_player_widget.dart';
+import 'video_player_widget.dart';
 
 class AttachmentTile extends StatelessWidget {
   final ConversationUIModel? conversation;
@@ -221,16 +222,16 @@ class AttachmentTile extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    // Check if it's an image
+    // Check attachment type
     if (conversation?.attachmentType == "image") {
       return _buildImageAttachment(context);
-    }
-    // Check if it's an audio file
-    else if (_isAudioFile(conversation?.attachmentUrl)) {
+    } else if (conversation?.attachmentType == "audio" ||
+        _isAudioFile(conversation?.attachmentUrl)) {
       return _buildAudioAttachment(context);
-    }
-    // Handle other file types
-    else if (conversation?.attachmentType != null &&
+    } else if (conversation?.attachmentType == "video" ||
+        _isVideoFile(conversation?.attachmentUrl)) {
+      return _buildVideoAttachment(context);
+    } else if (conversation?.attachmentType != null &&
         conversation?.attachmentType != "text") {
       return _buildFileAttachment(context);
     } else {
@@ -243,6 +244,14 @@ class AttachmentTile extends StatelessWidget {
     if (url == null) return false;
     String extension = url.split('.').last.toLowerCase();
     return ['mp3', 'wav', 'ogg', 'm4a', 'aac'].contains(extension);
+  }
+
+  // Check if the file is a video file based on extension
+  bool _isVideoFile(String? url) {
+    if (url == null) return false;
+    String extension = url.split('.').last.toLowerCase();
+    return ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'flv']
+        .contains(extension);
   }
 
   Widget _buildImageAttachment(BuildContext context) {
@@ -324,6 +333,14 @@ class AttachmentTile extends StatelessWidget {
     String fileName = conversation!.attachmentUrl!.split('/').last;
     return AudioPlayerWidget(
       audioUrl: conversation!.attachmentUrl!,
+      fileName: fileName,
+    );
+  }
+
+  Widget _buildVideoAttachment(BuildContext context) {
+    String fileName = conversation!.attachmentUrl!.split('/').last;
+    return VideoPlayerWidget(
+      videoUrl: conversation!.attachmentUrl!,
       fileName: fileName,
     );
   }

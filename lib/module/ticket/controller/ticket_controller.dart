@@ -61,6 +61,12 @@ class TicketController extends GetxController {
                 conversation.attachmentUrl!.split('.').last.toLowerCase();
             if (['jpg', 'jpeg', 'png', 'gif'].contains(fileExtension)) {
               conversation.attachmentType = 'image';
+            } else if (['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'flv']
+                .contains(fileExtension)) {
+              conversation.attachmentType = 'video';
+            } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac']
+                .contains(fileExtension)) {
+              conversation.attachmentType = 'audio';
             } else {
               conversation.attachmentType = 'file';
             }
