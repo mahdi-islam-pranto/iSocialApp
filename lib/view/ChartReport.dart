@@ -14,7 +14,7 @@ import '../constants/constants.dart';
 */
 
 class ChartReport extends StatelessWidget {
-   const ChartReport({Key? key}) : super(key: key);
+  const ChartReport({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -31,51 +31,46 @@ class ChartReport extends StatelessWidget {
               icon: Icon(Icons.arrow_back),
               onPressed: () {
                 Navigator.pop(context);
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => DashBoardScreen()));
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => DashBoardScreen()));
               }),
         ),
-        body: ListView(
-
-            children: [
-            //title padding
-            const SizedBox(
-              height: 60,
-              child: Center(
-                child: Text(
-                  "Label Report",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w400,
-                    fontSize: 20,
-                    color: Colors.black,
-                  ),
+        body: ListView(children: [
+          //title padding
+          const SizedBox(
+            height: 60,
+            child: Center(
+              child: Text(
+                "Label Report",
+                style: TextStyle(
+                  fontWeight: FontWeight.w400,
+                  fontSize: 20,
+                  color: Colors.black,
                 ),
               ),
             ),
+          ),
 
-            // label report section
-            LabelChart(),
+          // label report section
+          LabelChart(),
 
-
-            const SizedBox(
-              height: 60,
-              child: Center(
-                child: Text(
-                  "Count Report",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w400,
-                    fontSize: 20,
-                    color: Colors.black,
-                  ),
+          const SizedBox(
+            height: 60,
+            child: Center(
+              child: Text(
+                "Count Report",
+                style: TextStyle(
+                  fontWeight: FontWeight.w400,
+                  fontSize: 20,
+                  color: Colors.black,
                 ),
               ),
             ),
+          ),
 
-            //bar chart section
-            BarChartShow(),
-
-          ]
-        ),
+          //bar chart section
+          BarChartShow(),
+        ]),
       ),
     );
   }

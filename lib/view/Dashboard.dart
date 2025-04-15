@@ -102,7 +102,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                           child: const PostAndPageCounter(),
                         ),
                       ),
-                      SizedBox(height: 20.h),
+                      SizedBox(height: 5.h),
                       Center(
                         child: GestureDetector(
                           onTap: () {

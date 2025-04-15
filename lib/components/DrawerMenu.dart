@@ -270,22 +270,22 @@ class _DrawerMenuState extends State<DrawerMenu> {
                 thickness: 0.2,
               ),
             ),
-            ListTile(
-              title: const Text("Post"),
-              leading: const Icon(Icons.message_outlined),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (context) => AllPost()));
-              },
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: appPadding * 2),
-              child: Divider(
-                color: grey,
-                thickness: 0.2,
-              ),
-            ),
+            // ListTile(
+            //   title: const Text("Post"),
+            //   leading: const Icon(Icons.message_outlined),
+            //   onTap: () {
+            //     Navigator.pop(context);
+            //     Navigator.of(context)
+            //         .push(MaterialPageRoute(builder: (context) => AllPost()));
+            //   },
+            // ),
+            // const Padding(
+            //   padding: EdgeInsets.symmetric(horizontal: appPadding * 2),
+            //   child: Divider(
+            //     color: grey,
+            //     thickness: 0.2,
+            //   ),
+            // ),
             ListTile(
                 title: const Text('Ticket'),
                 leading: const Icon(Icons.person_add),

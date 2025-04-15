@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:android_id/android_id.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:isocial/api/login_api.dart';
@@ -214,7 +215,6 @@ class _loginPageState extends State<LoginScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         Container(
-
           height: 1.4 * (MediaQuery.of(context).size.height / 22),
           width: 5 * (MediaQuery.of(context).size.width / 10),
           margin: const EdgeInsets.only(bottom: 20),
@@ -228,7 +228,6 @@ class _loginPageState extends State<LoginScreen> {
               // check input field is valid or not
               if (emailKey.currentState!.validate() &&
                   passwordKey.currentState!.validate()) {
-
                 login();
 
                 // LoginAPI loginApi = LoginAPI(context);
@@ -288,7 +287,7 @@ class _loginPageState extends State<LoginScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         Padding(
-          padding: EdgeInsets.only(top: 40),
+          padding: const EdgeInsets.only(top: 40),
           child: TextButton(
             onPressed: () {},
             child: RichText(
@@ -368,7 +367,7 @@ class _loginPageState extends State<LoginScreen> {
     return (await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text('Are you sure?'),
+            title: const Text('Are you sure?'),
             content: const Text('Do you want to exit?.'),
             actions: <Widget>[
               TextButton(
@@ -384,6 +383,7 @@ class _loginPageState extends State<LoginScreen> {
         )) ??
         false;
   }
+
   // Login method
   Future<void> login() async {
     CustomProgress customProgress = CustomProgress(context);
@@ -392,14 +392,22 @@ class _loginPageState extends State<LoginScreen> {
           "Please wait", SimpleFontelicoProgressDialogType.spinner);
 
       // Api url
-      String url = 'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/login.php';
+      String url =
+          'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/login.php';
 
       //Authentication
-    //  Map<String, String> auth = {"email": email, "password": password};
+      //  Map<String, String> auth = {"email": email, "password": password};
+
+      // device id
+      const _androidIdPlugin = AndroidId();
+
+      final String? androidId = await _androidIdPlugin.getId();
+      print("Andriod Id:> ${androidId}");
 
       Map<String, dynamic> body = {
         "email": email,
         "password": password,
+        "device_id": androidId
       };
 
       HttpClient httpClient = HttpClient();
@@ -409,7 +417,7 @@ class _loginPageState extends State<LoginScreen> {
       // content type
       request.headers.set('Content-Type', 'application/json');
 
-     request.add(utf8.encode(json.encode(body)));
+      request.add(utf8.encode(json.encode(body)));
 
       //Get response
       HttpClientResponse response = await request.close();
@@ -441,10 +449,13 @@ class _loginPageState extends State<LoginScreen> {
 
           /// username
           print(data['data']['username']);
+
           /// token
           print(data['data']['token']);
+
           /// authorized_by
           print(data['data']['authorized_by']);
+
           ///role
           print(data['data']['role']);
 
@@ -473,7 +484,7 @@ class _loginPageState extends State<LoginScreen> {
 
           //Dashboard
           Navigator.push(context,
-              MaterialPageRoute(builder: (context) => DashBoardScreen()));
+              MaterialPageRoute(builder: (context) => const DashBoardScreen()));
         } else {
           //Hide progress
           customProgress.hideDialog();
@@ -481,9 +492,9 @@ class _loginPageState extends State<LoginScreen> {
           await showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              title: Text("Token Error"),
-              content:
-                  Text('Invalid token.', style: TextStyle(color: Colors.red)),
+              title: const Text("Token Error"),
+              content: const Text('Invalid token.',
+                  style: TextStyle(color: Colors.red)),
               actions: <Widget>[
                 TextButton(
                   onPressed: () {
@@ -502,11 +513,11 @@ class _loginPageState extends State<LoginScreen> {
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text(
+            title: const Text(
               "Login Error",
               style: TextStyle(color: Colors.yellow),
             ),
-            content: Text(data["data"].toString(),
+            content: const Text("Invalid email or password.",
                 style: TextStyle(color: Colors.red)),
             actions: <Widget>[
               TextButton(
@@ -529,11 +540,12 @@ class _loginPageState extends State<LoginScreen> {
       await showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(
+          title: const Text(
             "Login Error,",
             style: TextStyle(color: Colors.blue),
           ),
-          content: Text(e.toString(), style: TextStyle(color: Colors.red)),
+          content: Text("Invalid email or password.",
+              style: const TextStyle(color: Colors.red)),
           actions: <Widget>[
             TextButton(
               onPressed: () {

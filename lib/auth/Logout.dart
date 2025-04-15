@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:android_id/android_id.dart';
 import 'package:flutter/material.dart';
 import 'package:isocial/data/api_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -76,10 +77,17 @@ class Logout {
       // API URL
       String url = ApiUrls.logoutUrl;
 
+      // device id
+      const _androidIdPlugin = AndroidId();
+
+      final String? androidId = await _androidIdPlugin.getId();
+      print("Andriod Id:> ${androidId}");
+
       // Request body
-      Map<String, String> body = {
+      Map<String, dynamic> body = {
         "username": username,
-        "authorized_by": "ihelp20240123idev"
+        "authorized_by": "ihelp20240123idev",
+        "device_id": androidId ?? ""
       };
 
       // Create HTTP client and request

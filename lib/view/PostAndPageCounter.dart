@@ -1,14 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/constants.dart';
-
 
 /*
   Activity name : DashboardPostCounter API handler
@@ -18,8 +16,6 @@ import '../constants/constants.dart';
   Email : mazedulislam4970@gmail.com
 */
 
-
-
 class PostAndPageCounter extends StatefulWidget {
   const PostAndPageCounter({Key? key}) : super(key: key);
 
@@ -28,7 +24,6 @@ class PostAndPageCounter extends StatefulWidget {
 }
 
 class _PostAndPageCounterState extends State<PostAndPageCounter> {
-
   List postPageCounter = [];
   bool isLoading = false;
 
@@ -37,18 +32,15 @@ class _PostAndPageCounterState extends State<PostAndPageCounter> {
     return getBody();
   }
 
-
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    
+
     fetchPostPageCounterData();
   }
-  
 
   void fetchPostPageCounterData() async {
-
     setState(() {
       isLoading = true;
     });
@@ -58,10 +50,12 @@ class _PostAndPageCounterState extends State<PostAndPageCounter> {
 
     //Get user data from local device
     String token = sharedPreferences.getString("token").toString();
-    String authorized_by = sharedPreferences.getString("authorized_by").toString();
+    String authorized_by =
+        sharedPreferences.getString("authorized_by").toString();
 
     // Api url
-    String url = 'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/dash_count.php';
+    String url =
+        'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/dash_count.php';
 
     //Request API body
     Map<String, String> body = {
@@ -85,20 +79,19 @@ class _PostAndPageCounterState extends State<PostAndPageCounter> {
     // Closed request
     httpClient.close();
 
-
     // print(reply);
 
     // print(response.body);
     if (response.statusCode == 200) {
-
       setState(() {
         try {
-
           // Set dashboard counter data
-          postPageCounter = [json.decode(reply)["data"]['pageCount'], json.decode(reply)["data"]['postCount']];
+          postPageCounter = [
+            json.decode(reply)["data"]['pageCount'],
+            json.decode(reply)["data"]['postCount']
+          ];
           isLoading = false;
-
-        }catch(e){
+        } catch (e) {
           isLoading = true;
         }
       });
@@ -106,22 +99,18 @@ class _PostAndPageCounterState extends State<PostAndPageCounter> {
       postPageCounter = [];
       isLoading = false;
     }
-
   }
 
   Widget getBody() {
-
     try {
-
-
-      if (postPageCounter.contains(null) || postPageCounter.length < 0 || isLoading) {
+      if (postPageCounter.contains(null) ||
+          postPageCounter.length < 0 ||
+          isLoading) {
         return const Center(
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-            ));
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+        ));
       }
-      
-
 
       return Center(
         child: GridView(
@@ -135,30 +124,28 @@ class _PostAndPageCounterState extends State<PostAndPageCounter> {
           primary: false,
 
           children: [
-
             // Total Pages Counter
             Card(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: appPadding, vertical: appPadding / 2,),
-
-                decoration: BoxDecoration(color: secondaryColor,
-                    borderRadius: BorderRadius.circular(15),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: appPadding,
+                  vertical: appPadding / 2,
+                ),
+                decoration: BoxDecoration(
+                  color: secondaryColor,
+                  borderRadius: BorderRadius.circular(15),
                   border: Border(
                     left: BorderSide(
                       color: Colors
                           .blue, // Set the color you want for the left border
-                      width:
-                      5.0.w, // Set the width of the left border
+                      width: 5.0.w, // Set the width of the left border
                     ),
                   ),
                 ),
-
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -184,7 +171,8 @@ class _PostAndPageCounterState extends State<PostAndPageCounter> {
                         )
                       ],
                     ),
-                    Text("Total Pages",
+                    Text(
+                      "Total Pages",
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -201,19 +189,20 @@ class _PostAndPageCounterState extends State<PostAndPageCounter> {
             // Total Post Counter
             Card(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: appPadding, vertical: appPadding / 2,),
-
-                decoration: BoxDecoration(color: secondaryColor,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: appPadding,
+                  vertical: appPadding / 2,
+                ),
+                decoration: BoxDecoration(
+                    color: secondaryColor,
                     border: Border(
                       left: BorderSide(
                         color: Colors
                             .purple, // Set the color you want for the left border
-                        width:
-                        5.0.w, // Set the width of the left border
+                        width: 5.0.w, // Set the width of the left border
                       ),
                     ),
                     borderRadius: BorderRadius.circular(15)),
-
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -243,7 +232,8 @@ class _PostAndPageCounterState extends State<PostAndPageCounter> {
                         )
                       ],
                     ),
-                    Text("Total Post",
+                    Text(
+                      "Total Post",
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -256,8 +246,6 @@ class _PostAndPageCounterState extends State<PostAndPageCounter> {
                 ),
               ),
             ),
-
-
           ],
         ),
       );

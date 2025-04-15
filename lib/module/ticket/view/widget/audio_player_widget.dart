@@ -27,6 +27,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   bool _isPlaying = false;
   bool _isLoading = true;
   bool _isDownloading = false;
+  bool _isCompleted = false; // Track if audio playback has completed
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
   String? _errorMessage;
@@ -55,6 +56,16 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
         if (mounted && state.playing != _isPlaying) {
           setState(() {
             _isPlaying = state.playing;
+          });
+        }
+      });
+
+      // Listen to processing state changes to detect completion
+      _audioPlayer.processingStateStream.listen((processingState) {
+        if (mounted && processingState == ProcessingState.completed) {
+          setState(() {
+            _isCompleted = true;
+            _isPlaying = false;
           });
         }
       });
@@ -359,7 +370,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                       color: Colors.blue,
                       onPressed: _downloadAudio,
                       padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(),
+                      constraints: const BoxConstraints(),
                     ),
             ],
           ),
@@ -375,6 +386,13 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
               onChanged: (value) {
                 final position = Duration(seconds: value.toInt());
                 _audioPlayer.seek(position);
+
+                // If the audio was completed and user seeks, reset the completed state
+                if (_isCompleted) {
+                  setState(() {
+                    _isCompleted = false;
+                  });
+                }
               },
             ),
           ),
@@ -389,14 +407,24 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
               ),
               IconButton(
                 icon: Icon(
-                  _isPlaying
-                      ? Icons.pause_circle_filled
-                      : Icons.play_circle_filled,
+                  _isCompleted
+                      ? Icons.replay_circle_filled
+                      : (_isPlaying
+                          ? Icons.pause_circle_filled
+                          : Icons.play_circle_filled),
                   size: 30.sp,
                   color: Colors.blue,
                 ),
                 onPressed: () {
-                  if (_isPlaying) {
+                  if (_isCompleted) {
+                    // Restart the audio from the beginning
+                    _audioPlayer.seek(Duration.zero);
+                    _audioPlayer.play();
+                    setState(() {
+                      _isCompleted = false;
+                      _isPlaying = true;
+                    });
+                  } else if (_isPlaying) {
                     _audioPlayer.pause();
                   } else {
                     _audioPlayer.play();
