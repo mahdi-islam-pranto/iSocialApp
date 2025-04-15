@@ -127,6 +127,7 @@ class _TicketListState extends State<TicketList> {
                       ref.setString("dataType", ticket.dataType ?? "");
                       ref.setString("commentId", ticket.commentId ?? "");
                       ref.setString("pageId", ticket.pageId ?? "");
+                      ref.setString("name", ticket.name ?? "");
 
                       if (context.mounted) {
                         Navigator.of(context).push(
@@ -134,6 +135,8 @@ class _TicketListState extends State<TicketList> {
                               builder: (context) => TicketConversation(
                                     fullName: ticket.userName ?? "",
                                     dataType: ticket.dataType ?? "",
+                                    // name
+                                    pageName: ticket.name ?? "",
                                   )),
                         );
                       }
@@ -165,9 +168,17 @@ class _TicketListState extends State<TicketList> {
                       ],
                     ),
 
-                    subtitle: Text(
-                      ticket.dataType ?? "",
-                      style: const TextStyle(color: Colors.grey),
+                    subtitle: Row(
+                      children: [
+                        Text(
+                          ticket.dataType ?? "",
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                        Text(
+                          " (${ticket.name ?? ""})",
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ],
                     ),
                   ),
                 );

@@ -5,7 +5,9 @@ import '../../model/ticket_conversation_list.response.dart';
 
 class OwnMessageTile extends StatelessWidget {
   final ConversationUIModel? conversation;
-  const OwnMessageTile({super.key, this.conversation});
+  // page name
+  final String? pageName;
+  const OwnMessageTile({super.key, this.conversation, this.pageName});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +30,7 @@ class OwnMessageTile extends StatelessWidget {
               ),
               SizedBox(width: 20.w),
               Text(
-                conversation?.userName ?? "",
+                pageName ?? "",
                 style: TextStyle(fontSize: 12.sp, color: Colors.black45),
               ),
               SizedBox(width: 5.w),

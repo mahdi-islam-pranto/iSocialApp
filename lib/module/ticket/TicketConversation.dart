@@ -17,10 +17,14 @@ import 'model/ticket_conversation_list.response.dart';
 
 class TicketConversation extends StatefulWidget {
   const TicketConversation(
-      {Key? key, required this.fullName, required this.dataType})
+      {Key? key,
+      required this.fullName,
+      required this.dataType,
+      required this.pageName})
       : super(key: key);
   final String fullName;
   final String dataType;
+  final String pageName;
 
   @override
   State<TicketConversation> createState() => _TicketConversationState();
@@ -59,9 +63,17 @@ class _TicketConversationState extends State<TicketConversation> {
           title: Row(
             children: [
               Flexible(child: Text(widget.fullName.toString())),
-              Text(
-                "(${widget.dataType})",
-                style: TextStyle(color: Colors.grey, fontSize: 18.sp),
+              Row(
+                children: [
+                  Text(
+                    " (${widget.dataType})",
+                    style: TextStyle(color: Colors.grey, fontSize: 18.sp),
+                  ),
+                  Text(
+                    " -> ${widget.pageName}",
+                    style: TextStyle(color: Colors.grey, fontSize: 10.sp),
+                  ),
+                ],
               ),
             ],
           ),
@@ -118,7 +130,10 @@ class _TicketConversationState extends State<TicketConversation> {
 
                               return conversation.senderType == "user"
                                   ? UserMessageTile(conversation: conversation)
-                                  : OwnMessageTile(conversation: conversation);
+                                  : OwnMessageTile(
+                                      conversation: conversation,
+                                      pageName: widget.pageName,
+                                    );
                             },
                           ),
                         ),
