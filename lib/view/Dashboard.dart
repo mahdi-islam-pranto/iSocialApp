@@ -126,21 +126,22 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                       SizedBox(
                           height: 60.h,
                           child: Center(
-                              child: Text("Label Chart",
+                              child: Text("Sentiment Chart",
                                   style: TextStyle(
                                       fontWeight: FontWeight.w400,
                                       fontSize: 20.sp,
                                       color: Colors.black)))),
                       const Center(child: LabelChart()),
                       SizedBox(
-                          height: 80.h,
+                          height: 90.h,
                           child: Center(
-                              child: Text("Bar Chart",
+                              child: Text("Ticket Count",
                                   style: TextStyle(
                                       fontWeight: FontWeight.w400,
                                       fontSize: 20.sp,
                                       color: Colors.black)))),
                       const Center(child: BarChartShow()),
+                      SizedBox(height: 10.h),
                     ],
                   ),
                 ),

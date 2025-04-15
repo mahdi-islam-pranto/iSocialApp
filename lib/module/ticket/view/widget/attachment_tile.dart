@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+// import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -49,44 +49,44 @@ class AttachmentTile extends StatelessWidget {
       }
 
       // Download the image
-      final response = await http.get(Uri.parse(imageUrl));
-      if (response.statusCode == 200) {
-        // Save the image
-        final result = await ImageGallerySaver.saveImage(
-          response.bodyBytes,
-          quality: 100,
-          name: "downloaded_image_${DateTime.now().millisecondsSinceEpoch}",
-        );
+      // final response = await http.get(Uri.parse(imageUrl));
+      // if (response.statusCode == 200) {
+      //   // Save the image
+      //   final result = await ImageGallerySaver.saveImage(
+      //     response.bodyBytes,
+      //     quality: 100,
+      //     name: "downloaded_image_${DateTime.now().millisecondsSinceEpoch}",
+      //   );
 
-        if (result['isSuccess']) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: Colors.green,
-                content: const Row(
-                  children: [
-                    Icon(Icons.check_circle_outline, color: Colors.white),
-                    SizedBox(width: 10),
-                    Text(
-                      "Image downloaded successfully",
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ],
-                ),
-                duration: const Duration(seconds: 3),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            );
-          }
-        } else {
-          throw Exception("Failed to save image");
-        }
-      } else {
-        throw Exception("Failed to download image");
-      }
+      //   if (result['isSuccess']) {
+      //     if (context.mounted) {
+      //       ScaffoldMessenger.of(context).showSnackBar(
+      //         SnackBar(
+      //           backgroundColor: Colors.green,
+      //           content: const Row(
+      //             children: [
+      //               Icon(Icons.check_circle_outline, color: Colors.white),
+      //               SizedBox(width: 10),
+      //               Text(
+      //                 "Image downloaded successfully",
+      //                 style: TextStyle(color: Colors.white),
+      //               ),
+      //             ],
+      //           ),
+      //           duration: const Duration(seconds: 3),
+      //           behavior: SnackBarBehavior.floating,
+      //           shape: RoundedRectangleBorder(
+      //             borderRadius: BorderRadius.circular(10),
+      //           ),
+      //         ),
+      //       );
+      //     }
+      //   } else {
+      //     throw Exception("Failed to save image");
+      //   }
+      // } else {
+      //   throw Exception("Failed to download image");
+      // }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -314,7 +314,8 @@ class AttachmentTile extends StatelessWidget {
           top: 8,
           right: 8,
           child: GestureDetector(
-            onTap: () => _downloadImage(context, conversation!.attachmentUrl!),
+            onTap: () => _downloadFile(context, conversation!.attachmentUrl!),
+            // _downloadImage(context, conversation!.attachmentUrl!),
             child: const CircleAvatar(
               radius: 20,
               backgroundColor: Colors.blue,

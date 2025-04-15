@@ -61,7 +61,8 @@ dependencies:
   path_provider:
   permission_handler:
   open_file:
-  image_gallery_saver:
+  # image_gallery_saver:
+  # flutter_image_gallery_saver: ^0.0.2
   win32: ^5.5.1 # Downgraded for compatibility
   just_audio: ^0.9.36
   audio_session: ^0.1.18
@@ -70,6 +71,14 @@ dependencies:
   chewie: ^1.7.5
   path: ^1.8.3
   android_id: 
+
+
+
+# dependency_overrides:
+#   image_gallery_saver:
+#     git:
+#       url: https://github.com/knottx/image_gallery_saver.git
+#       ref: knottx-latest
 
 dev_dependencies:
   flutter_test:
