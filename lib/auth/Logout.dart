@@ -129,19 +129,39 @@ class Logout {
               MaterialPageRoute(builder: (context) => const LoginScreen()),
               (Route<dynamic> route) => false);
         }
-      } else if (data['status'] == "401") {
+      }
+      // else if (data['status'] == "401") {
+      //   // Clear SharedPreferences
+      //   await sharedPreferences.clear();
+      //   // Set login status to false
+      //   await sharedPreferences.setBool("loginStatus", false);
+      //   // Navigate to login screen
+      //   debugPrint("Logout failed: ${data['data']}");
+      //   // navigate to login screen
+      //   Navigator.of(context).pushAndRemoveUntil(
+      //       MaterialPageRoute(builder: (context) => const LoginScreen()),
+      //       (Route<dynamic> route) => false);
+      // }
+      else {
+        // Show error dialog
+        // Hide progress dialog
+        // customProgress.hideDialog();
+        // debugPrint("Logout failed: ${data['data']}");
+
+        // await showErrorDialog(
+        //     "Logout Failed",
+        //     "${data['data']} + ${data['status']}" ??
+        //         "Failed to logout. Please try again.");
         // Clear SharedPreferences
         await sharedPreferences.clear();
         // Set login status to false
         await sharedPreferences.setBool("loginStatus", false);
         // Navigate to login screen
+        debugPrint("Logout failed: ${data['data']}");
+        // navigate to login screen
         Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const LoginScreen()),
             (Route<dynamic> route) => false);
-      } else {
-        // Show error dialog
-        await showErrorDialog("Logout Failed",
-            data['data'] ?? "Failed to logout. Please try again.");
       }
     } catch (e) {
       // Hide progress dialog

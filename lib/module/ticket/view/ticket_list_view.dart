@@ -25,22 +25,46 @@ class TicketList extends StatefulWidget {
 
 class _TicketListState extends State<TicketList> {
   TicketController controller = Get.put(TicketController());
-  AutoLoaderController autoLoaderController = AutoLoaderController();
+  late AutoLoaderController autoLoaderController;
 
   @override
   void initState() {
+    super.initState();
     controller.fetchTicketList();
     controller.conversationBoxScrollToBottom();
-    // autoLoaderController.ticketListLoader();
-    //controller.conversationBoxScrollToBottom;
-    super.initState();
+
+    // Initialize and start the auto-loader for ticket list
+    autoLoaderController = AutoLoaderController();
+    autoLoaderController.ticketListLoader();
+  }
+
+  @override
+  void dispose() {
+    // Clean up resources when widget is disposed
+    autoLoaderController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Ticket List"),
+        title: Obx(() => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Ticket List"),
+                if (controller.isAutoRefreshing.value)
+                  Container(
+                    margin: const EdgeInsets.only(left: 10),
+                    width: 15,
+                    height: 15,
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+              ],
+            )),
         leading: IconButton(
             icon: Icon(
               Icons.arrow_back_ios,
@@ -56,7 +80,7 @@ class _TicketListState extends State<TicketList> {
               onPressed: () {
                 // Refresh ticket list with error handling
                 try {
-                  controller.fetchTicketList();
+                  controller.fetchTicketList(isAutoRefresh: false);
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error refreshing: $e')),

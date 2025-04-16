@@ -89,9 +89,10 @@ class TicketController extends GetxController {
 
   RxList<TicketListUIModel> ticketList = <TicketListUIModel>[].obs;
   RxBool isLoading = false.obs;
+  RxBool isAutoRefreshing = false.obs; // For auto-refresh indicator
 
 // fetch ticket list
-  void fetchTicketList() async {
+  void fetchTicketList({bool isAutoRefresh = false}) async {
     Map<String, dynamic> body = {
       "authorized_by": SharedPrefs.getString("authorized_by"),
       "username": SharedPrefs.getString("username"),
@@ -107,7 +108,14 @@ class TicketController extends GetxController {
     log("Headers: $header");
 
     try {
-      isLoading.value = true;
+      // If it's a manual refresh, show the full loading indicator
+      // If it's an auto-refresh, show a subtle indicator
+      if (isAutoRefresh) {
+        isAutoRefreshing.value = true;
+      } else {
+        isLoading.value = true;
+      }
+
       DefaultResponse defaultResponse = await ApiService.post(
           url: ApiUrls.ticketList, body: body, header: header);
 
@@ -120,23 +128,71 @@ class TicketController extends GetxController {
               TicketListResponseModel.fromJson(defaultResponse.response);
 
           log("Parsed ticket list: ${ticketListResponseModel.ticketList?.length ?? 0} items");
-          ticketList.value = ticketListResponseModel.ticketList ?? [];
+
+          // Compare new list with current list to check for changes
+          List<TicketListUIModel> newList =
+              ticketListResponseModel.ticketList ?? [];
+          bool hasNewTickets = _hasNewTickets(ticketList, newList);
+
+          // Update the list
+          ticketList.value = newList;
           log("Ticket list updated successfully");
+
+          // If auto-refreshing and new tickets found, show a notification
+          if (isAutoRefresh && hasNewTickets) {
+            Get.snackbar(
+              "New Tickets",
+              "New tickets have been received",
+              snackPosition: SnackPosition.TOP,
+              backgroundColor: Colors.green,
+              colorText: Colors.white,
+              duration: const Duration(seconds: 2),
+            );
+          }
         } catch (e) {
           log("Error parsing ticket list response: $e");
-          showBasicFailedSnackBar(message: "Error parsing data: $e");
+          if (!isAutoRefresh) {
+            // Only show error for manual refresh
+            showBasicFailedSnackBar(message: "Error parsing data: $e");
+          }
         }
       } else {
         log("API call failed: ${defaultResponse.response['message']}");
-        showBasicFailedSnackBar(message: defaultResponse.response['message']);
+        if (!isAutoRefresh) {
+          // Only show error for manual refresh
+          showBasicFailedSnackBar(message: defaultResponse.response['message']);
+        }
       }
     } catch (e, stackTrace) {
       log("Exception in fetchTicketList: $e");
       log("Stack trace: $stackTrace");
-      showBasicFailedSnackBar(message: "Error: $e");
+      if (!isAutoRefresh) {
+        // Only show error for manual refresh
+        showBasicFailedSnackBar(message: "Error: $e");
+      }
     } finally {
       isLoading.value = false;
+      isAutoRefreshing.value = false;
     }
+  }
+
+  // Helper method to check if there are new tickets
+  bool _hasNewTickets(
+      RxList<TicketListUIModel> oldList, List<TicketListUIModel> newList) {
+    // If new list is longer, there are definitely new tickets
+    if (newList.length > oldList.length) {
+      return true;
+    }
+
+    // Check for any new unique IDs that weren't in the old list
+    Set<String?> oldIds = oldList.map((ticket) => ticket.uniqueId).toSet();
+    for (var ticket in newList) {
+      if (!oldIds.contains(ticket.uniqueId)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   void sendReplay() async {

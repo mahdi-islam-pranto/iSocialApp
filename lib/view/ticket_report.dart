@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart'; // Added for date formatting
 
 class TicketReportScreen extends StatefulWidget {
   @override
@@ -16,13 +17,78 @@ class _TicketReportScreenState extends State<TicketReportScreen> {
   final TextEditingController _startDateController = TextEditingController();
   final TextEditingController _endDateController = TextEditingController();
 
+  // Date format
+  final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
+
   @override
   void initState() {
     super.initState();
-    final String today = DateTime.now().toIso8601String().split('T').first;
+    final String today = _dateFormat.format(DateTime.now());
     _startDateController.text = today;
     _endDateController.text = today;
     _fetchTicketReport();
+  }
+
+  // Method to show date picker for start date
+  Future<void> _selectStartDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _startDateController.text.isNotEmpty
+          ? _dateFormat.parse(_startDateController.text)
+          : DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.purple,
+              onPrimary: Colors.white,
+              surface: Colors.purple.shade50,
+              onSurface: Colors.purple.shade700,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _startDateController.text = _dateFormat.format(picked);
+      });
+    }
+  }
+
+  // Method to show date picker for end date
+  Future<void> _selectEndDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _endDateController.text.isNotEmpty
+          ? _dateFormat.parse(_endDateController.text)
+          : DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.purple,
+              onPrimary: Colors.white,
+              surface: Colors.purple.shade50,
+              onSurface: Colors.purple.shade700,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _endDateController.text = _dateFormat.format(picked);
+      });
+    }
   }
 
   Future<void> _fetchTicketReport() async {
@@ -100,20 +166,36 @@ class _TicketReportScreenState extends State<TicketReportScreen> {
                     Expanded(
                       child: TextField(
                         controller: _startDateController,
+                        readOnly:
+                            true, // Make it read-only since we use date picker
                         decoration: InputDecoration(
                           labelText: 'Start Date',
                           border: OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.calendar_today,
+                                color: Colors.purple),
+                            onPressed: () => _selectStartDate(context),
+                          ),
                         ),
+                        onTap: () => _selectStartDate(context),
                       ),
                     ),
                     SizedBox(width: 16.0),
                     Expanded(
                       child: TextField(
                         controller: _endDateController,
-                        decoration: const InputDecoration(
+                        readOnly:
+                            true, // Make it read-only since we use date picker
+                        decoration: InputDecoration(
                           labelText: 'End Date',
                           border: OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons.calendar_today,
+                                color: Colors.purple),
+                            onPressed: () => _selectEndDate(context),
+                          ),
                         ),
+                        onTap: () => _selectEndDate(context),
                       ),
                     ),
                     const SizedBox(width: 16.0),
@@ -382,5 +464,12 @@ class _TicketReportScreenState extends State<TicketReportScreen> {
         ),
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _startDateController.dispose();
+    _endDateController.dispose();
+    super.dispose();
   }
 }

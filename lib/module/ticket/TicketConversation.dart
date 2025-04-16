@@ -14,6 +14,7 @@ import 'package:isocial/module/ticket/view/widget/user_message_tile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'controller/auto_loader_controller.dart';
 import 'model/ticket_conversation_list.response.dart';
+import 'view/ticket_list_view.dart';
 
 class TicketConversation extends StatefulWidget {
   const TicketConversation(
@@ -321,6 +322,13 @@ class _TicketConversationState extends State<TicketConversation> {
         DispositionController.dispositionSubCat.isNotEmpty &&
         DispositionController.labelId.isNotEmpty) {
       controller.sendReplay();
+
+      print("Ticket closed: ${controller.sendReplay}");
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TicketList(),
+          ));
 
       setState(() {
         if (realtimeConversation) {
