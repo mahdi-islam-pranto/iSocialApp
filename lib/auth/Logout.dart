@@ -129,6 +129,15 @@ class Logout {
               MaterialPageRoute(builder: (context) => const LoginScreen()),
               (Route<dynamic> route) => false);
         }
+      } else if (data['status'] == "401") {
+        // Clear SharedPreferences
+        await sharedPreferences.clear();
+        // Set login status to false
+        await sharedPreferences.setBool("loginStatus", false);
+        // Navigate to login screen
+        Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (Route<dynamic> route) => false);
       } else {
         // Show error dialog
         await showErrorDialog("Logout Failed",
