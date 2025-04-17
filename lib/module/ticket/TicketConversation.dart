@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -47,7 +48,31 @@ class _TicketConversationState extends State<TicketConversation> {
     controller.getTicketConversation();
     autoLoaderController.start();
 
+    // Add listener to uploadingAttachment to cancel the timer when upload completes
+    controller.uploadingAttachment.listen((isUploading) {
+      if (!isUploading) {
+        _cancelUploadTimeoutTimer();
+      }
+    });
+
     super.initState();
+  }
+
+  // Timer for attachment upload timeout
+  Timer? _uploadTimeoutTimer;
+
+  // Helper method to cancel the upload timeout timer
+  void _cancelUploadTimeoutTimer() {
+    if (_uploadTimeoutTimer != null && _uploadTimeoutTimer!.isActive) {
+      _uploadTimeoutTimer!.cancel();
+      _uploadTimeoutTimer = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _cancelUploadTimeoutTimer();
+    super.dispose();
   }
 
   @override
@@ -223,13 +248,9 @@ class _TicketConversationState extends State<TicketConversation> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
+                      SizedBox(
                         height: 40.h,
                         width: MediaQuery.of(context).size.width / 2 - 15,
-                        // decoration: BoxDecoration(
-                        //   border: Border.all(color: Colors.grey,width: 1),
-                        //   borderRadius: BorderRadius.circular(3),
-                        // ),
                         child: const Center(child: TemplateDisposition()),
                       ),
                       SizedBox(
@@ -323,19 +344,21 @@ class _TicketConversationState extends State<TicketConversation> {
         DispositionController.labelId.isNotEmpty) {
       controller.sendReplay();
 
-      print("Ticket closed: ${controller.sendReplay}");
+      debugPrint("Ticket closed: ${controller.sendReplay}");
       // navigate to ticket list and remove this page from stack
       // Navigator.pushReplacement(
       //   context,
       //   MaterialPageRoute(builder: (context) => TicketList()),
       // );
-      Navigator.pop(context);
-      // show snackbar
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Ticket closed successfully'),
-            backgroundColor: Colors.green),
-      );
+      if (mounted) {
+        Navigator.pop(context);
+        // show snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Ticket closed successfully'),
+              backgroundColor: Colors.green),
+        );
+      }
 
       setState(() {
         if (realtimeConversation) {
@@ -354,6 +377,26 @@ class _TicketConversationState extends State<TicketConversation> {
       // Show loading indicator immediately
       controller.uploadingAttachment.value = true;
 
+      // Set a timeout timer (30 seconds)
+      _uploadTimeoutTimer = Timer(const Duration(seconds: 30), () {
+        // If this timer fires, it means the upload took too long
+        if (controller.uploadingAttachment.value) {
+          debugPrint("Attachment upload timed out after 30 seconds");
+          controller.uploadingAttachment.value = false;
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                    'Attachment upload timed out. Please check your connection and try again.'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
+        }
+      });
+
       // Debugging print statements
       debugPrint("Attachment replay started with file: ${file.path}");
 
@@ -368,6 +411,9 @@ class _TicketConversationState extends State<TicketConversation> {
         // controller.attachmentReplayController(file);
       } else {
         debugPrint("No file path or invalid ticket status.");
+        _cancelUploadTimeoutTimer();
+        controller.uploadingAttachment.value = false;
+        return;
       }
 
       SharedPreferences sharedPreferences =
@@ -380,12 +426,15 @@ class _TicketConversationState extends State<TicketConversation> {
       if (DispositionController.ticketStatus.contains("Progress") &&
           DispositionController.attachmentData.isNotEmpty) {
         controller.attachmentReplayController(file);
+        // The controller will handle setting uploadingAttachment.value = false
+        // We'll cancel the timer when the upload completes or fails in the controller
       } else if (DispositionController.ticketStatus.contains("Closed") &&
           DispositionController.dispositionType.isNotEmpty &&
           DispositionController.dispositionCat.isNotEmpty &&
           DispositionController.dispositionSubCat.isNotEmpty &&
           DispositionController.labelId.isNotEmpty) {
         controller.attachmentReplayController(file);
+        // The controller will handle setting uploadingAttachment.value = false
 
         setState(() {
           if (realtimeConversation) {
@@ -396,6 +445,8 @@ class _TicketConversationState extends State<TicketConversation> {
         });
       } else {
         //replayRequest();
+        _cancelUploadTimeoutTimer();
+        controller.uploadingAttachment.value = false;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -406,6 +457,7 @@ class _TicketConversationState extends State<TicketConversation> {
       }
     } catch (e) {
       debugPrint("Error in attachmentReplay: $e");
+      _cancelUploadTimeoutTimer();
       controller.uploadingAttachment.value = false;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

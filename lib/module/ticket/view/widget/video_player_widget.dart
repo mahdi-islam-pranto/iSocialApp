@@ -6,7 +6,7 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
+import '../../../../utilities/permission_service.dart';
 
 class VideoPlayerWidget extends StatefulWidget {
   final String videoUrl;
@@ -114,8 +114,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         _isDownloading = true;
       });
 
-      // Request storage permission
-      bool permissionGranted = await _requestStoragePermission();
+      // Request storage permission using the centralized permission service
+      bool permissionGranted =
+          await PermissionService.requestStoragePermission(context);
       if (!permissionGranted) {
         setState(() {
           _isDownloading = false;
@@ -200,81 +201,6 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         _isDownloading = false;
       });
     }
-  }
-
-  Future<bool> _requestStoragePermission() async {
-    if (Platform.isAndroid) {
-      try {
-        // Try multiple permission approaches
-        // First try storage permission
-        var storageStatus = await Permission.storage.status;
-        if (!storageStatus.isGranted) {
-          storageStatus = await Permission.storage.request();
-        }
-
-        // If storage permission is granted, return true
-        if (storageStatus.isGranted) {
-          return true;
-        }
-
-        // If we're here, storage permission was denied
-        // Try external storage permission
-        var externalStorageStatus =
-            await Permission.manageExternalStorage.status;
-        if (!externalStorageStatus.isGranted) {
-          externalStorageStatus =
-              await Permission.manageExternalStorage.request();
-        }
-
-        // If external storage permission is granted, return true
-        if (externalStorageStatus.isGranted) {
-          return true;
-        }
-
-        // If we're here, both permissions were denied
-        // Show explanation dialog
-        if (mounted) {
-          _showPermissionExplanationDialog();
-        }
-        return false;
-      } catch (e) {
-        debugPrint("Error requesting permissions: $e");
-        return false;
-      }
-    }
-
-    // For non-Android platforms, return true
-    return true;
-  }
-
-  void _showPermissionExplanationDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Storage Permission Required'),
-          content: const Text(
-              'To download video files, this app needs permission to access your device storage. '
-              'Please grant storage permission in the app settings.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                // Open app settings so user can enable permission
-                await openAppSettings();
-              },
-              child: const Text('Open Settings'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
