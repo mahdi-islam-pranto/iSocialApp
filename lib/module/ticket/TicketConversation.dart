@@ -45,8 +45,13 @@ class _TicketConversationState extends State<TicketConversation> {
 
   @override
   void initState() {
+    super.initState();
+
     controller.getTicketConversation();
     autoLoaderController.start();
+
+    // We'll fetch the agent list only when needed (when transfer button is clicked)
+    // This avoids unnecessary API calls and potential timing issues
 
     // Add listener to uploadingAttachment to cancel the timer when upload completes
     controller.uploadingAttachment.listen((isUploading) {
@@ -54,8 +59,6 @@ class _TicketConversationState extends State<TicketConversation> {
         _cancelUploadTimeoutTimer();
       }
     });
-
-    super.initState();
   }
 
   // Timer for attachment upload timeout
@@ -88,12 +91,19 @@ class _TicketConversationState extends State<TicketConversation> {
         appBar: AppBar(
           title: Row(
             children: [
-              Flexible(child: Text(widget.fullName.toString())),
+              Flexible(
+                  child: Text(
+                widget.fullName.toString(),
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  color: Colors.black,
+                ),
+              )),
               Row(
                 children: [
                   Text(
                     " (${widget.dataType})",
-                    style: TextStyle(color: Colors.grey, fontSize: 18.sp),
+                    style: TextStyle(color: Colors.grey, fontSize: 12.sp),
                   ),
                   Text(
                     " -> ${widget.pageName}",
@@ -101,6 +111,20 @@ class _TicketConversationState extends State<TicketConversation> {
                   ),
                 ],
               ),
+
+              SizedBox(width: 10.w),
+              // transfer button
+              OutlinedButton(
+                onPressed: () {
+                  _showTransferDialog(context);
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(2),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text("Transfer"),
+              )
             ],
           ),
           leading: IconButton(
@@ -177,7 +201,7 @@ class _TicketConversationState extends State<TicketConversation> {
                         child: Container(
                           margin: const EdgeInsets.only(
                               left: 10, right: 0, bottom: 0),
-                          color: Colors.white,
+                          // color: Colors.blue,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 5, vertical: 5),
                           child: Stack(
@@ -218,7 +242,8 @@ class _TicketConversationState extends State<TicketConversation> {
                       ),
                       // Message sent button
                       IconButton(
-                        padding: const EdgeInsets.only(right: 0, left: 0),
+                        padding:
+                            const EdgeInsets.only(right: 0, left: 0, bottom: 6),
                         onPressed: () async {
                           // Add your send function here
                           sendReplay();
@@ -233,7 +258,7 @@ class _TicketConversationState extends State<TicketConversation> {
                   ),
                   //Simple Padding
                   SizedBox(
-                    height: 10.h,
+                    height: 5.h,
                   ),
                   // Sub Category dropdown dispositions
                   Visibility(
@@ -256,20 +281,20 @@ class _TicketConversationState extends State<TicketConversation> {
                       SizedBox(
                         width: 10.w,
                       ),
-                      Container(
+                      SizedBox(
                         height: 40.h,
                         width: MediaQuery.of(context).size.width / 2 - 15,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.white),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
+                        // decoration: BoxDecoration(
+                        //   border: Border.all(color: Colors.white),
+                        //   borderRadius: BorderRadius.circular(3),
+                        // ),
                         child: Center(child: progressClose()),
                       ),
                     ],
                   ),
                   //simple disposition
                   SizedBox(
-                    height: 10.h,
+                    height: 25.h,
                   )
                 ],
               );
@@ -682,6 +707,137 @@ class _TicketConversationState extends State<TicketConversation> {
             Navigator.of(context).pop();
             // Do nothing if canceled
           },
+        );
+      },
+    );
+  }
+
+  // Show transfer dialog with agent list dropdown
+  void _showTransferDialog(BuildContext context) {
+    // Selected agent username
+    String? selectedUsername;
+
+    // Refresh the agent list when dialog is opened
+    debugPrint("Opening transfer dialog, fetching fresh agent list");
+    // Clear the list first to ensure we get fresh data
+    controller.agentList.clear();
+    controller.fetchAgentList().then((_) {
+      debugPrint("Agent list fetched, count: ${controller.agentList.length}");
+    });
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Transfer Ticket'),
+          content: Obx(() {
+            debugPrint(
+                "Dialog Obx rebuilding, loadingAgents: ${controller.loadingAgents.value}, agentList length: ${controller.agentList.length}");
+
+            if (controller.loadingAgents.value) {
+              return const SizedBox(
+                height: 100,
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            if (controller.agentList.isEmpty) {
+              debugPrint("Agent list is empty in the dialog");
+              return SizedBox(
+                height: 100,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('No agents available'),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: () {
+                          controller.fetchAgentList();
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            debugPrint(
+                "Building dropdown with ${controller.agentList.length} agents");
+            return StatefulBuilder(
+              builder: (context, setState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                        'Select agent to transfer this ticket (${controller.agentList.length} available):'),
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedUsername,
+                          hint: const Text('Select Agent'),
+                          isExpanded: true,
+                          items: controller.agentList.map((agent) {
+                            return DropdownMenuItem<String>(
+                              value: agent.username,
+                              child: Text(
+                                // (${agent.username ?? "Unknown"}) - ${agent.role ?? "Unknown"}
+                                agent.fullName ?? "Unknown",
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            debugPrint("Selected agent: $value");
+                            setState(() {
+                              selectedUsername = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          }),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (selectedUsername != null) {
+                  debugPrint("Transferring ticket to: $selectedUsername");
+                  Navigator.pop(context);
+                  controller.transferTicket(selectedUsername!);
+                } else {
+                  debugPrint("No agent selected for transfer");
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please select an agent'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Transfer'),
+            ),
+          ],
         );
       },
     );

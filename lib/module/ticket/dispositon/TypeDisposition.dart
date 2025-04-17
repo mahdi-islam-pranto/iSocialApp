@@ -6,14 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'DispositonController.dart';
 
-/*
-  Activity name : Type disposition
-  Project name : iHelpBD CRM
-  Auth : Eng. Mazedul Islam
-  Designation : Full Stack Software Developer
-  Email : mazedulislam4970@gmail.com
-*/
-
 class TypeDisposition extends StatefulWidget {
   const TypeDisposition({Key? key}) : super(key: key);
 
@@ -24,7 +16,6 @@ class TypeDisposition extends StatefulWidget {
 class _TypeDispositionState extends State<TypeDisposition> {
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     fetchTypeDispositionData();
   }
@@ -45,9 +36,7 @@ class _TypeDispositionState extends State<TypeDisposition> {
               ),
               child: Center(child: getTypeDisposition()),
             ),
-            const SizedBox(
-              width: 10,
-            ),
+            const SizedBox(width: 10),
             Container(
               height: 40,
               width: MediaQuery.of(context).size.width / 2 - 15,
@@ -59,9 +48,7 @@ class _TypeDispositionState extends State<TypeDisposition> {
             ),
           ],
         ),
-        const SizedBox(
-          height: 10,
-        ),
+        const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -74,9 +61,7 @@ class _TypeDispositionState extends State<TypeDisposition> {
               ),
               child: Center(child: getSubCategoryDisposition()),
             ),
-            const SizedBox(
-              width: 10,
-            ),
+            const SizedBox(width: 10),
             Container(
               height: 40,
               width: MediaQuery.of(context).size.width / 2 - 15,
@@ -88,456 +73,275 @@ class _TypeDispositionState extends State<TypeDisposition> {
             ),
           ],
         ),
-        const SizedBox(height: 10)
+        const SizedBox(height: 10),
       ],
     );
   }
 
-  /*Type Disposition*/
-
+  /* ------------------ Type Disposition ------------------ */
   List<String> typeDisID = [];
   List<String> typeDisType = [];
   String? typeDropDownValue = " --Type--";
   bool isTypeDisLoading = false;
 
-  //Fetch type disposition data
   void fetchTypeDispositionData() async {
     setState(() {
       isTypeDisLoading = true;
     });
 
     try {
-      //Show progress dialog
       SharedPreferences sharedPreferences =
           await SharedPreferences.getInstance();
+      String token = sharedPreferences.getString("token") ?? "";
+      String authorizedBy = sharedPreferences.getString("authorized_by") ?? "";
 
-      //Get user data from local device
-      String token = sharedPreferences.getString("token").toString();
-      String authorizedBy =
-          sharedPreferences.getString("authorized_by").toString();
-
-      // Api url
       String url =
           'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/type.php';
-
-      //Request API body
       Map<String, String> body = {"authorized_by": authorizedBy};
 
       HttpClient httpClient = HttpClient();
-
       HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
-
-      // content type
       request.headers.set('content-type', 'application/json');
       request.headers.set('token', token);
-
       request.add(utf8.encode(json.encode(body)));
 
-      //Get response
       HttpClientResponse response = await request.close();
       String reply = await response.transform(utf8.decoder).join();
-
-      // Closed request
       httpClient.close();
 
       if (response.statusCode == 200) {
         final items = json.decode(reply)["data"];
-
         setState(() {
-          try {
-            for (int index = 0; index < items.length; index++) {
-              typeDisID.add(items[index]["id"]);
-              typeDisType.add(items[index]["type"]);
-            }
-            isTypeDisLoading = false;
-          } catch (e) {
-            // Add default values if API data parsing fails
-            _addDefaultTypeValues();
+          for (var item in items) {
+            typeDisID.add(item["id"]);
+            typeDisType.add(item["type"]);
           }
+          isTypeDisLoading = false;
         });
       } else {
-        // Add default values if API response is not 200
         _addDefaultTypeValues();
       }
     } catch (e) {
-      // Add default values if any exception occurs during API call
       _addDefaultTypeValues();
     }
   }
 
-  // Add default type values when API fails
   void _addDefaultTypeValues() {
     setState(() {
-      typeDisID = ["1", "2", "3", "4", "5"];
-      typeDisType = [
-        "Category1",
-        "Category2",
-        "Category3",
-        "Category4",
-        "Category5"
-      ];
+      typeDisID = ["id"];
+      typeDisType = ["data not found"];
       isTypeDisLoading = false;
     });
   }
 
-  //Show Type dropdown disposition
   Widget getTypeDisposition() {
-    // If still loading, show progress indicator for a short time
     if (isTypeDisLoading) {
-      return const Center(
-          child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-      ));
+      return const Center(child: CircularProgressIndicator());
     }
 
-    // If lists are empty or contain null after loading is complete, show default dropdown
-    if (typeDisType.isEmpty ||
-        typeDisID.isEmpty ||
-        typeDisType.contains(null) ||
-        typeDisID.contains(null)) {
-      _addDefaultTypeValues();
-    }
+    var template = [" --Type--"];
+    template.addAll(typeDisType);
 
-    try {
-      // List of items in our dropdown menu
-      var template = [" --Type--"];
+    return DropdownButton(
+      isExpanded: true,
+      value: typeDropDownValue,
+      icon: const Icon(Icons.keyboard_arrow_down),
+      items: template.map((String item) {
+        return DropdownMenuItem(
+            value: item,
+            child: Text(item, style: const TextStyle(fontSize: 13)));
+      }).toList(),
+      onChanged: (newValue) {
+        categoryName.clear();
+        categoryID.clear();
+        isCategoryDisLoading = true;
 
-      //Add template title
-      template.addAll(typeDisType);
-
-      return DropdownButton(
-          isExpanded: true,
-          // Initial Value
-          value: typeDropDownValue,
-          icon: const Icon(Icons.keyboard_arrow_down),
-
-          // Array list of items
-          items: template.map((String items) {
-            return DropdownMenuItem(
-              value: items,
-              child: Text(
-                items,
-                style: const TextStyle(fontSize: 13),
-              ),
-            );
-          }).toList(),
-          onChanged: (dynamic newValue) {
-            categoryName.clear();
-            categoryID.clear();
-            isCategoryDisLoading = true;
-
-            setState(() {
-              String dispositionType =
-                  typeDisID[typeDisType.indexOf(newValue)].toString();
-
-              //Fetching Category Disposition data
-              fetchCategoryDispositionData(dispositionType);
-
-              //set disposition type value
-              DispositionController.dispositionType = dispositionType;
-
-              // Assign new dropdown value
-              typeDropDownValue = newValue;
-            });
-          });
-    } catch (e) {
-      return const Text("Select Type");
-    }
+        setState(() {
+          String typeID = typeDisID[typeDisType.indexOf(newValue!)];
+          fetchCategoryDispositionData(typeID);
+          DispositionController.dispositionType = typeID;
+          typeDropDownValue = newValue;
+        });
+      },
+    );
   }
 
-  /*Category Disposition*/
-
+  /* ------------------ Category Disposition ------------------ */
   List<String> categoryID = [];
   List<String> categoryName = [];
   String? categoryDropDownValue = " --Category--";
   bool isCategoryDisLoading = false;
 
-  //Fetch category disposition data
   void fetchCategoryDispositionData(String id) async {
     setState(() {
       isCategoryDisLoading = true;
     });
 
     try {
-      //Show progress dialog
       SharedPreferences sharedPreferences =
           await SharedPreferences.getInstance();
+      String token = sharedPreferences.getString("token") ?? "";
+      String authorizedBy = sharedPreferences.getString("authorized_by") ?? "";
 
-      //Get user data from local device
-      String token = sharedPreferences.getString("token").toString();
-      String authorizedBy =
-          sharedPreferences.getString("authorized_by").toString();
-
-      // Api url
       String url =
-          'https://omni.ihelpbd.com/ihelpbd_social/api/v1/category.php';
-
-      //Request API body
+          'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/category.php';
       Map<String, dynamic> body = {
         "authorized_by": authorizedBy,
         "type_id": id,
       };
+      print("category body>>${body}");
 
       HttpClient httpClient = HttpClient();
-
       HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
-
-      // content type
       request.headers.set('content-type', 'application/json');
       request.headers.set('token', token);
-
       request.add(utf8.encode(json.encode(body)));
 
-      //Get response
       HttpClientResponse response = await request.close();
       String reply = await response.transform(utf8.decoder).join();
-
-      // Closed request
       httpClient.close();
 
       if (response.statusCode == 200) {
+        final items = json.decode(reply)["data"];
         setState(() {
-          try {
-            final items = json.decode(reply)["data"];
-            for (int index = 0; index < items.length; index++) {
-              categoryID.add(items[index]["id"]);
-              categoryName.add(items[index]["name"]);
-            }
-            isCategoryDisLoading = false;
-          } catch (e) {
-            // Add default values if API data parsing fails
-            _addDefaultCategoryValues();
+          for (var item in items) {
+            categoryID.add(item["id"]);
+            categoryName.add(item["name"]);
           }
+          isCategoryDisLoading = false;
         });
       } else {
-        // Add default values if API response is not 200
         _addDefaultCategoryValues();
       }
     } catch (e) {
-      // Add default values if any exception occurs during API call
       _addDefaultCategoryValues();
     }
   }
 
-  // Add default category values when API fails
   void _addDefaultCategoryValues() {
     setState(() {
-      categoryID = ["1", "2", "3", "4"];
-      categoryName = [
-        "SubCategory1",
-        "SubCategory2",
-        "SubCategory3",
-        "SubCategory4"
-      ];
+      categoryID = ["id"];
+      categoryName = ["data not found"];
       isCategoryDisLoading = false;
     });
   }
 
-  //Show Category dropdown disposition
   Widget getCategoryDisposition() {
-    // If still loading, show progress indicator for a short time
     if (isCategoryDisLoading) {
-      return const Center(
-          child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-      ));
+      return const Center(child: CircularProgressIndicator());
     }
 
-    // If lists are empty or contain null after loading is complete, show default dropdown
-    if (categoryName.isEmpty ||
-        categoryID.isEmpty ||
-        categoryName.contains(null) ||
-        categoryID.contains(null)) {
-      _addDefaultCategoryValues();
-    }
+    var template = [" --Category--"];
+    template.addAll(categoryName);
 
-    try {
-      // List of items in our dropdown menu
-      var template = [" --Category--"];
+    return DropdownButton(
+      isExpanded: true,
+      value: categoryDropDownValue,
+      icon: const Icon(Icons.keyboard_arrow_down),
+      items: template.map((String item) {
+        return DropdownMenuItem(
+            value: item,
+            child: Text(item, style: const TextStyle(fontSize: 13)));
+      }).toList(),
+      onChanged: (newValue) {
+        subCategoryID.clear();
+        subCategoryTitle.clear();
+        isSubCategoryDisLoading = true;
 
-      //Add template title
-      template.addAll(categoryName);
-
-      return DropdownButton(
-          isExpanded: true,
-
-          // Initial Value
-          value: categoryDropDownValue,
-          icon: const Icon(Icons.keyboard_arrow_down),
-
-          // Array list of items
-          items: template.map((String items) {
-            return DropdownMenuItem(
-              value: items,
-              child: Text(
-                items,
-                style: const TextStyle(fontSize: 13),
-              ),
-            );
-          }).toList(),
-          onChanged: (dynamic newValue) {
-            subCategoryID.clear();
-            subCategoryTitle.clear();
-            isSubCategoryDisLoading = true;
-
-            setState(() {
-              String dispositionCat =
-                  categoryID[categoryName.indexOf(newValue)].toString();
-
-              //Fetching Sub category disposition data
-              fetchSubCategoryDispositionData(dispositionCat);
-
-              //Set disposition category
-              DispositionController.dispositionCat = dispositionCat;
-
-              // Assign new dropdown value
-              categoryDropDownValue = newValue;
-            });
-          });
-    } catch (e) {
-      return const Text("Select Category");
-    }
+        setState(() {
+          String catID = categoryID[categoryName.indexOf(newValue!)];
+          fetchSubCategoryDispositionData(catID);
+          DispositionController.dispositionCat = catID;
+          categoryDropDownValue = newValue;
+        });
+      },
+    );
   }
 
-  /*Sub Category Disposition*/
-
+  /* ------------------ SubCategory Disposition ------------------ */
   List<String> subCategoryID = [];
   List<String> subCategoryTitle = [];
-  String? subCategoryDropDownValue = " --Sub Category--";
+  String? subCategoryDropDownValue = " --Subcategory--";
   bool isSubCategoryDisLoading = false;
 
-  //Fetch sub category disposition data
   void fetchSubCategoryDispositionData(String catId) async {
     setState(() {
       isSubCategoryDisLoading = true;
     });
 
     try {
-      //Show progress dialog
       SharedPreferences sharedPreferences =
           await SharedPreferences.getInstance();
+      String token = sharedPreferences.getString("token") ?? "";
+      String authorizedBy = sharedPreferences.getString("authorized_by") ?? "";
 
-      //Get user data from local device
-      String token = sharedPreferences.getString("token").toString();
-      String authorizedBy =
-          sharedPreferences.getString("authorized_by").toString();
-
-      // Api url
       String url =
-          'https://omni.ihelpbd.com/ihelpbd_social/api/v1/sub_category.php';
-
-      //Request API body
+          'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/sub_category.php';
       Map<String, dynamic> body = {
         "authorized_by": authorizedBy,
-        "cat_id": catId,
+        "category_id": catId,
       };
+      print("subcategory body>>${body}");
 
       HttpClient httpClient = HttpClient();
-
       HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
-
-      // content type
       request.headers.set('content-type', 'application/json');
       request.headers.set('token', token);
-
       request.add(utf8.encode(json.encode(body)));
 
-      //Get response
       HttpClientResponse response = await request.close();
       String reply = await response.transform(utf8.decoder).join();
-
-      // Closed request
       httpClient.close();
 
       if (response.statusCode == 200) {
         final items = json.decode(reply)["data"];
-
         setState(() {
-          try {
-            for (int index = 0; index < items.length; index++) {
-              subCategoryID.add(items[index]["id"]);
-              subCategoryTitle.add(items[index]["sub_cat"]);
-            }
-            isSubCategoryDisLoading = false;
-          } catch (e) {
-            // Add default values if API data parsing fails
-            _addDefaultSubCategoryValues();
+          for (var item in items) {
+            subCategoryID.add(item["id"]);
+            subCategoryTitle.add(item["title"]);
           }
+          isSubCategoryDisLoading = false;
         });
       } else {
-        // Add default values if API response is not 200
         _addDefaultSubCategoryValues();
       }
     } catch (e) {
-      // Add default values if any exception occurs during API call
       _addDefaultSubCategoryValues();
     }
   }
 
-  // Add default sub category values when API fails
   void _addDefaultSubCategoryValues() {
     setState(() {
-      subCategoryID = ["1", "2", "3"];
-      subCategoryTitle = ["SubItem1", "SubItem2", "SubItem3"];
+      subCategoryID = ["id"];
+      subCategoryTitle = ["data not found"];
       isSubCategoryDisLoading = false;
     });
   }
 
-  //Show Sub Category dropdown disposition
   Widget getSubCategoryDisposition() {
-    // If still loading, show progress indicator for a short time
     if (isSubCategoryDisLoading) {
-      return const Center(
-          child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-      ));
+      return const Center(child: CircularProgressIndicator());
     }
 
-    // If lists are empty or contain null after loading is complete, show default dropdown
-    if (subCategoryTitle.isEmpty ||
-        subCategoryID.isEmpty ||
-        subCategoryTitle.contains(null) ||
-        subCategoryID.contains(null)) {
-      _addDefaultSubCategoryValues();
-    }
+    var template = [" --Subcategory--"];
+    template.addAll(subCategoryTitle);
 
-    try {
-      // List of items in our dropdown menu
-      var template = [" --Sub Category--"];
-
-      //Add template title
-      template.addAll(subCategoryTitle);
-
-      return DropdownButton(
-          isExpanded: true,
-
-          // Initial Value
-          value: subCategoryDropDownValue,
-          icon: const Icon(Icons.keyboard_arrow_down),
-
-          // Array list of items
-          items: template.map((String items) {
-            return DropdownMenuItem(
-              value: items,
-              child: Text(
-                items,
-                style: const TextStyle(fontSize: 13),
-              ),
-            );
-          }).toList(),
-          onChanged: (dynamic newValue) {
-            setState(() {
-              String dispositionSubCat =
-                  subCategoryID[subCategoryTitle.indexOf(newValue)].toString();
-
-              //Set sub category disposition
-              DispositionController.dispositionSubCat = dispositionSubCat;
-
-              subCategoryDropDownValue = newValue;
-            });
-          });
-    } catch (e) {
-      return const Text("Select Sub Category");
-    }
+    return DropdownButton(
+      isExpanded: true,
+      value: subCategoryDropDownValue,
+      icon: const Icon(Icons.keyboard_arrow_down),
+      items: template.map((String item) {
+        return DropdownMenuItem(
+            value: item,
+            child: Text(item, style: const TextStyle(fontSize: 13)));
+      }).toList(),
+      onChanged: (newValue) {
+        setState(() {
+          String subCatId = subCategoryID[subCategoryTitle.indexOf(newValue!)];
+          DispositionController.dispositionSubCat = subCatId;
+          subCategoryDropDownValue = newValue;
+        });
+      },
+    );
   }
 }

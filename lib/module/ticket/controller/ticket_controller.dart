@@ -13,6 +13,7 @@ import '../../../data/api_url.dart';
 import '../dispositon/DispositonController.dart';
 import '../model/ticket_conversation_list.response.dart';
 import '../model/ticket_list_response.dart';
+import '../model/agent_list_response.dart';
 import 'package:http/http.dart' as http;
 
 class TicketController extends GetxController {
@@ -21,6 +22,10 @@ class TicketController extends GetxController {
   RxBool loading = true.obs;
   RxBool uploadingAttachment =
       false.obs; // For attachment upload loading indicator
+
+  // For agent list dropdown
+  RxList<AgentData> agentList = <AgentData>[].obs;
+  RxBool loadingAgents = false.obs;
 
   @override
   void onInit() {
@@ -415,5 +420,146 @@ class TicketController extends GetxController {
   // Public method for saving conversation list
   void saveConversationList() {
     _saveConversationList();
+  }
+
+  // Fetch agent list for transfer dropdown
+  Future<void> fetchAgentList() async {
+    try {
+      log("Starting to fetch agent list...");
+      loadingAgents.value = true;
+
+      // Get token from SharedPrefs
+      String? token = SharedPrefs.getString("token");
+      if (token != null && token.isNotEmpty) {
+        log("Token for agent list API is available");
+      } else {
+        log("WARNING: Token is null or empty!");
+      }
+
+      // Create request body
+      Map<String, dynamic> body = {
+        "authorized_by": SharedPrefs.getString("authorized_by") ?? "",
+        "username": SharedPrefs.getString("username") ?? ""
+      };
+
+      Map<String, String> header = {
+        "token": SharedPrefs.getString("token") ?? "",
+        "content-type": "application/json"
+      };
+
+      log("Agent list API URL: ${ApiUrls.agentListUrl}");
+      log("Agent list API body: $body");
+      log("Agent list API headers: $header");
+
+      // Use POST instead of GET
+      final response = await http.post(Uri.parse(ApiUrls.agentListUrl),
+          headers: header, body: json.encode(body));
+
+      log("Agent list API response status code: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
+        log("Agent list API raw response: ${response.body}");
+        var jsonResponse = json.decode(response.body);
+        log("Agent list API decoded response status: ${jsonResponse['status']}");
+
+        AgentListResponse agentListResponse =
+            AgentListResponse.fromJson(jsonResponse);
+
+        log("Agent list response status: ${agentListResponse.status}");
+        log("Agent list response data null check: ${agentListResponse.data != null}");
+        if (agentListResponse.data != null) {
+          log("Agent list data length: ${agentListResponse.data!.length}");
+        }
+
+        // Always set the agent list from the response, even if it's empty
+        // This ensures we're using the latest data
+        agentList.value = agentListResponse.data ?? [];
+
+        if (agentListResponse.status == "200" && agentList.isNotEmpty) {
+          log("Agent list fetched successfully: ${agentList.length} agents");
+
+          // Log each agent for debugging
+          for (var agent in agentList) {
+            log("Agent: ${agent.username}, ${agent.fullName}, ${agent.role}");
+          }
+        } else {
+          log("Failed to fetch agent list or list is empty. Status: ${agentListResponse.status}");
+          if (jsonResponse['data'] is String) {
+            log("Error message: ${jsonResponse['data']}");
+          }
+          // Don't show a snackbar here as it might be confusing to the user
+          // The UI will show a retry button if needed
+        }
+      } else {
+        log("Failed to fetch agent list. Status code: ${response.statusCode}");
+        log("Response body: ${response.body}");
+        showBasicFailedSnackBar(
+            message: "Failed to fetch agent list. Server error.");
+      }
+    } catch (e, stackTrace) {
+      log("Error fetching agent list: $e");
+      log("Stack trace: $stackTrace");
+      showBasicFailedSnackBar(message: "Error fetching agent list: $e");
+    } finally {
+      loadingAgents.value = false;
+    }
+  }
+
+  // Transfer ticket to another agent
+  Future<void> transferTicket(String username) async {
+    try {
+      // Show loading indicator
+      Get.dialog(
+        const Center(
+          child: CircularProgressIndicator(),
+        ),
+        barrierDismissible: false,
+      );
+
+      Map<String, dynamic> body = {
+        "authorized_by": SharedPrefs.getString("authorized_by"),
+        "unique_id": SharedPrefs.getString("uniqueId"),
+        "username": username,
+      };
+
+      Map<String, String> header = {
+        "content-type": "application/json",
+        "token": SharedPrefs.getString("token") ?? ""
+      };
+
+      // Call the transfer ticket API
+      DefaultResponse defaultResponse = await ApiService.post(
+          url: ApiUrls.transferTicketUrl, body: body, header: header);
+
+      // Close loading dialog
+      Get.back();
+
+      if (defaultResponse.success) {
+        Get.snackbar(
+          "Success",
+          "Ticket transferred successfully to $username",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 3),
+        );
+
+        // Navigate back to ticket list
+        Get.back();
+      } else {
+        showBasicFailedSnackBar(
+            message: defaultResponse.response['message'] ??
+                "Failed to transfer ticket");
+      }
+    } catch (e, stackTrace) {
+      // Close loading dialog if open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      log("Error transferring ticket: $e");
+      log("Stack trace: $stackTrace");
+      showBasicFailedSnackBar(message: "Error transferring ticket: $e");
+    }
   }
 }

@@ -10,9 +10,9 @@ import 'DispositonController.dart';
 /*
   Activity name : Label disposition
   Project name : iHelpBD CRM
-  Auth : Eng. Mazedul Islam
+  Auth : Eng. Sk Nayeem Ur Rahman, Pranto
   Designation : Full Stack Software Developer
-  Email : mazedulislam4970@gmail.com
+  Email : nayeemdevelperbd@gmail.com
 */
 
 class LabelDisposition extends StatefulWidget {
@@ -24,7 +24,7 @@ class LabelDisposition extends StatefulWidget {
 
 class _LabelDispositionState extends State<LabelDisposition> {
   List<String> labelDisposition = [];
-  String? labelDropDownValue = " --Label--";
+  String? labelDropDownValue = " --Feedback--";
 
   bool labelDispositionIsLoading = false;
 
@@ -50,7 +50,8 @@ class _LabelDispositionState extends State<LabelDisposition> {
         sharedPreferences.getString("authorized_by").toString();
 
     // Api url
-    String url = 'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/label.php';
+    String url =
+        'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/label.php';
 
     //Request API body
     Map<String, dynamic> body = {
@@ -107,7 +108,7 @@ class _LabelDispositionState extends State<LabelDisposition> {
     }
 
     // List of items in our dropdown menu
-    var template = [" --Label--"];
+    var template = [" --Feedback--"];
 
     //Add template title
     template.addAll(labelDisposition);
