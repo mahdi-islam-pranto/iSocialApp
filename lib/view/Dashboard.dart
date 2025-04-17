@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:isocial/controller/dashboard_auto_refresh_controller.dart';
 import 'package:isocial/module/ticket/view/ticket_list_view.dart';
 import 'package:isocial/notification_services.dart';
 import 'package:isocial/view/LabelChart.dart';
@@ -33,6 +35,16 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
   List counterValue = [];
   List counterKey = [];
   bool isLoading = false;
+  bool isAutoRefreshing = false;
+
+  // References to child widgets using generic GlobalKey
+  final postPageCounterKey = GlobalKey();
+  final realTimeDataKey = GlobalKey();
+  final labelChartKey = GlobalKey();
+  final barChartKey = GlobalKey();
+
+  // Auto-refresh controller
+  late DashboardAutoRefreshController autoRefreshController;
 
   NotificationServices notificationServices = NotificationServices();
   Color appBarContainerColor = Colors.grey; // Default color
@@ -42,6 +54,24 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
     notificationServices.requestNotificationPermission();
     super.initState();
     getUserNameAndEmail();
+
+    // Initialize auto-refresh controller
+    autoRefreshController = DashboardAutoRefreshController(
+      refreshPostPageCounter: _refreshPostPageCounter,
+      refreshRealTimeData: _refreshRealTimeData,
+      refreshLabelChart: _refreshLabelChart,
+      refreshBarChart: _refreshBarChart,
+    );
+
+    // Start auto-refresh
+    autoRefreshController.startAutoRefresh(intervalSeconds: 30);
+  }
+
+  @override
+  void dispose() {
+    // Clean up resources
+    autoRefreshController.dispose();
+    super.dispose();
   }
 
   @override
@@ -53,10 +83,25 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
           elevation: 0,
           title: const AppTitleField(),
           actions: [
+            // Manual refresh button
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh dashboard',
+              onPressed: () {
+                // Show snackbar to indicate manual refresh
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Refreshing dashboard data...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+                autoRefreshController.refreshNow();
+              },
+            ),
             SizedBox(width: 10.w),
             PopupMenuButton<DropMenuItem>(
               position: PopupMenuPosition.under,
-              padding: EdgeInsets.only(right: 15, top: 10, bottom: 10),
+              padding: const EdgeInsets.only(right: 15, top: 10, bottom: 10),
               icon: Image.asset(
                 "assets/images/person.png",
                 color: Colors.blueGrey,
@@ -90,7 +135,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                           height: 120.h,
                           margin: const EdgeInsets.only(left: 5, right: 5),
                           decoration: BoxDecoration(
-                            boxShadow: [
+                            boxShadow: const [
                               BoxShadow(
                                   color: Colors.white12,
                                   offset: Offset(0, 2),
@@ -109,7 +154,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
                             Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => TicketList(),
+                                  builder: (context) => const TicketList(),
                                 ));
                           },
                           child: Container(
@@ -211,7 +256,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
             Text(userName,
                 style:
                     const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            Text("(${role})",
+            Text("($role)",
                 style:
                     const TextStyle(fontSize: 12, fontWeight: FontWeight.w300)),
           ],
@@ -238,10 +283,72 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
   }
 
   Future<void> _handleRefresh() async {
-    await Future.delayed(const Duration(seconds: 2));
+    // Show a snackbar to indicate refresh is happening
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Refreshing dashboard data...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    // Trigger manual refresh of all components
+    autoRefreshController.refreshNow();
+
+    // Wait a moment to allow the refresh indicator to show properly
+    await Future.delayed(const Duration(seconds: 1));
+  }
+
+  // Helper methods to refresh individual components
+  void _refreshPostPageCounter() {
+    // Force rebuild of the entire dashboard
     setState(() {
-      Navigator.pushReplacement(context,
-          MaterialPageRoute(builder: (BuildContext context) => super.widget));
+      // This will trigger a rebuild of all widgets
+    });
+  }
+
+  void _refreshRealTimeData() {
+    developer.log('🔄 DASHBOARD: Forcing refresh of RealTimeData');
+    // Call the static refresh method with silent=true for auto-refresh, silent=false for manual refresh
+    bool isManualRefresh = !autoRefreshController.isAutoRefreshing;
+
+    // Always force a refresh of RealTimeData to ensure API is called
+    RealTimeData.refreshAll(silent: !isManualRefresh);
+
+    // For manual refresh, we want to show the loading indicator
+    // For auto-refresh, we want to silently update in the background
+    if (isManualRefresh) {
+      // Force rebuild of the entire dashboard to refresh RealTimeData
+      setState(() {
+        // This will trigger a rebuild of the RealTimeData widget
+        // We need to force the RealTimeData widget to fetch new data
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation1, animation2) =>
+                const DashBoardScreen(),
+            transitionDuration: Duration.zero,
+            maintainState: true,
+          ),
+        );
+      });
+    } else {
+      // For auto-refresh, just trigger a setState to refresh the UI with new data
+      // This is important to ensure the UI updates with new data
+      setState(() {
+        developer.log('🔄 DASHBOARD: Auto-refresh setState triggered');
+      });
+    }
+  }
+
+  void _refreshLabelChart() {
+    setState(() {
+      // This will trigger a rebuild of all widgets
+    });
+  }
+
+  void _refreshBarChart() {
+    setState(() {
+      // This will trigger a rebuild of all widgets
     });
   }
 }

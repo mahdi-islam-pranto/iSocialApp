@@ -90,7 +90,9 @@ class AttachmentTile extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error downloading image: $e")),
+          const SnackBar(
+              content: Text(
+                  "Error downloading image. Please try again & give necessary permission.")),
         );
       }
     }

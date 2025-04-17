@@ -324,11 +324,18 @@ class _TicketConversationState extends State<TicketConversation> {
       controller.sendReplay();
 
       print("Ticket closed: ${controller.sendReplay}");
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TicketList(),
-          ));
+      // navigate to ticket list and remove this page from stack
+      // Navigator.pushReplacement(
+      //   context,
+      //   MaterialPageRoute(builder: (context) => TicketList()),
+      // );
+      Navigator.pop(context);
+      // show snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Ticket closed successfully'),
+            backgroundColor: Colors.green),
+      );
 
       setState(() {
         if (realtimeConversation) {

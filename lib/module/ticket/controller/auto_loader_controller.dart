@@ -28,7 +28,7 @@ class AutoLoaderController {
   void ticketListLoader() {
     log('Starting ticket list auto-loader');
     // Check every 10 seconds for new tickets
-    const refreshInterval = Duration(seconds: 10);
+    const refreshInterval = Duration(seconds: 5);
     ticketListTimer = Timer.periodic(refreshInterval, (Timer t) {
       log('Auto-refreshing ticket list');
       ticketController.fetchTicketList(isAutoRefresh: true);
