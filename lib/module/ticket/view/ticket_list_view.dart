@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:isocial/module/ticket/controller/ticket_controller.dart';
 import 'package:isocial/module/ticket/dispositon/DispositonController.dart';
 import 'package:isocial/module/ticket/model/ticket_list_response.dart';
+import 'package:isocial/storage/sharedPrefs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../TicketConversation.dart';
 import '../controller/auto_loader_controller.dart';
@@ -36,6 +37,42 @@ class _TicketListState extends State<TicketList> {
     // Initialize and start the auto-loader for ticket list
     autoLoaderController = AutoLoaderController();
     autoLoaderController.ticketListLoader();
+
+    // Check if we have a success message to show
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // First check if we have arguments from Get navigation
+      if (Get.arguments != null && Get.arguments is Map) {
+        final args = Get.arguments as Map;
+        if (args.containsKey('showSnackbar') && args['showSnackbar'] == true) {
+          final message = args['message'] as String? ?? 'Operation successful';
+          // Show success snackbar
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          return; // Don't check SharedPrefs if we already showed a snackbar
+        }
+      }
+
+      // Then check if we have a success message in SharedPrefs
+      String? transferMessage =
+          SharedPrefs.getString("transfer_success_message");
+      if (transferMessage != null && transferMessage.isNotEmpty) {
+        // Show success snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(transferMessage),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        // Clear the message so it doesn't show again
+        SharedPrefs.remove("transfer_success_message");
+      }
+    });
   }
 
   @override

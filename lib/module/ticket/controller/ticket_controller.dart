@@ -14,9 +14,12 @@ import '../dispositon/DispositonController.dart';
 import '../model/ticket_conversation_list.response.dart';
 import '../model/ticket_list_response.dart';
 import '../model/agent_list_response.dart';
+import '../view/ticket_list_view.dart';
 import 'package:http/http.dart' as http;
 
 class TicketController extends GetxController {
+  // Callback for successful ticket transfer
+  Function? onTransferSuccess;
   RxList<ConversationUIModel> conversationList = <ConversationUIModel>[].obs;
   RxString reply = "".obs;
   RxBool loading = true.obs;
@@ -437,10 +440,10 @@ class TicketController extends GetxController {
       }
 
       // Create request body
-      Map<String, dynamic> body = {
-        "authorized_by": SharedPrefs.getString("authorized_by") ?? "",
-        "username": SharedPrefs.getString("username") ?? ""
-      };
+      // Map<String, dynamic> body = {
+      //   "authorized_by": SharedPrefs.getString("authorized_by") ?? "",
+      //   "username": SharedPrefs.getString("username") ?? ""
+      // };
 
       Map<String, String> header = {
         "token": SharedPrefs.getString("token") ?? "",
@@ -448,12 +451,12 @@ class TicketController extends GetxController {
       };
 
       log("Agent list API URL: ${ApiUrls.agentListUrl}");
-      log("Agent list API body: $body");
+      log("Agent list API body: ");
       log("Agent list API headers: $header");
 
       // Use POST instead of GET
-      final response = await http.post(Uri.parse(ApiUrls.agentListUrl),
-          headers: header, body: json.encode(body));
+      final response =
+          await http.post(Uri.parse(ApiUrls.agentListUrl), headers: header);
 
       log("Agent list API response status code: ${response.statusCode}");
 
@@ -507,54 +510,115 @@ class TicketController extends GetxController {
 
   // Transfer ticket to another agent
   Future<void> transferTicket(String username) async {
-    try {
-      // Show loading indicator
-      Get.dialog(
-        const Center(
-          child: CircularProgressIndicator(),
-        ),
-        barrierDismissible: false,
-      );
+    // Variable to track if we need to show a loading dialog
+    bool showLoading = true;
 
-      Map<String, dynamic> body = {
-        "authorized_by": SharedPrefs.getString("authorized_by"),
-        "unique_id": SharedPrefs.getString("uniqueId"),
+    try {
+      // Log parameters for debugging
+      String? uniqueId = SharedPrefs.getString("uniqueId");
+      String? token = SharedPrefs.getString("token");
+
+      log("Transfer ticket parameters:");
+      log("username: $username");
+      log("uniqueId: $uniqueId");
+      log("token available: ${token != null && token.isNotEmpty}");
+
+      // Validate required parameters
+      if (uniqueId == null || uniqueId.isEmpty) {
+        log("ERROR: uniqueId is null or empty");
+        showBasicFailedSnackBar(
+            message: "Cannot transfer ticket: Missing ticket ID");
+        return;
+      }
+
+      if (username.isEmpty) {
+        log("ERROR: username is empty");
+        showBasicFailedSnackBar(
+            message: "Cannot transfer ticket: Missing agent username");
+        return;
+      }
+
+      // Show loading indicator safely
+      if (showLoading && Get.context != null) {
+        showDialog(
+          context: Get.context!,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          },
+        );
+      }
+
+      // Prepare request body with all required parameters
+      Map<String, String> body = {
+        "unique_id": uniqueId,
         "username": username,
       };
 
-      Map<String, String> header = {
+      Map<String, dynamic> header = {
         "content-type": "application/json",
-        "token": SharedPrefs.getString("token") ?? ""
+        "token": token ?? "",
       };
+
+      log("Transfer ticket API URL: ${ApiUrls.transferTicketUrl}");
+      log("Transfer ticket API body: $body");
+      log("Transfer ticket API headers: $header");
 
       // Call the transfer ticket API
       DefaultResponse defaultResponse = await ApiService.post(
           url: ApiUrls.transferTicketUrl, body: body, header: header);
 
-      // Close loading dialog
-      Get.back();
+      // Close loading dialog safely
+      if (showLoading &&
+          Get.context != null &&
+          Navigator.canPop(Get.context!)) {
+        Navigator.of(Get.context!).pop();
+      }
+
+      log("Transfer ticket API response success: ${defaultResponse.success}");
+      log("Transfer ticket API response: ${defaultResponse.response}");
 
       if (defaultResponse.success) {
-        Get.snackbar(
-          "Success",
-          "Ticket transferred successfully to $username",
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 3),
-        );
+        log("Transfer successful, navigating to ticket list");
 
-        // Navigate back to ticket list
-        Get.back();
+        // Store the success message in a static variable that will be accessed by TicketList
+        SharedPrefs.setString("transfer_success_message",
+            "Ticket transferred successfully to $username");
+
+        // Use a callback to navigate from the UI layer
+        // This avoids the contextless navigation issue
+        if (onTransferSuccess != null) {
+          log("Calling onTransferSuccess callback");
+          onTransferSuccess!();
+        } else {
+          log("No onTransferSuccess callback provided");
+        }
       } else {
-        showBasicFailedSnackBar(
-            message: defaultResponse.response['message'] ??
-                "Failed to transfer ticket");
+        // Safely access the error message
+        String errorMessage = "Failed to transfer ticket";
+        try {
+          if (defaultResponse.response.containsKey('message')) {
+            errorMessage = defaultResponse.response['message'] ?? errorMessage;
+          } else if (defaultResponse.response.containsKey('data')) {
+            // Some APIs return error messages in the 'data' field
+            errorMessage =
+                defaultResponse.response['data']?.toString() ?? errorMessage;
+          }
+        } catch (e) {
+          log("Error accessing response message: $e");
+        }
+
+        log("Transfer failed with error: $errorMessage");
+        showBasicFailedSnackBar(message: errorMessage);
       }
     } catch (e, stackTrace) {
-      // Close loading dialog if open
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
+      // Close loading dialog safely if open
+      if (showLoading &&
+          Get.context != null &&
+          Navigator.canPop(Get.context!)) {
+        Navigator.of(Get.context!).pop();
       }
 
       log("Error transferring ticket: $e");

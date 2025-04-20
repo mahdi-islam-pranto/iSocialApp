@@ -1,7 +1,7 @@
-import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:isocial/view/Dashboard.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:isocial/storage/sharedPrefs.dart';
 import 'auth/LoginScreen.dart';
 
 /*
@@ -24,38 +24,38 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void initState() {
-    // TODO: implement initState
-    isLogin();
     super.initState();
+    // Check login status and navigate after a short delay
+    isLogin().then((_) {
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        Get.off(
+            () => loginStatus ? const DashBoardScreen() : const LoginScreen());
+      });
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: animatedIconShow(),
+    return Scaffold(
+      body: Center(
+        child: Image.asset(
+          "assets/images/ihelpbd.png",
+          width: 200,
+          height: 200,
+        ),
+      ),
     );
   }
 
-  //Show animated splash screen
-  animatedIconShow() {
-    return AnimatedSplashScreen(
-        splash: Image.asset("assets/images/ihelpbd.png"),
-        splashTransition: SplashTransition.scaleTransition,
-        duration: 3000,
-        // nextScreen: const LoginScreen());
-        nextScreen: loginStatus ? DashBoardScreen() : LoginScreen());
-  }
-
-  Future isLogin() async {
+  Future<void> isLogin() async {
     try {
-      SharedPreferences ref = await SharedPreferences.getInstance();
-
+      // Use the SharedPrefs utility class
+      final loginValue = SharedPrefs.getBool("loginStatus");
       setState(() {
-        loginStatus = ref.getBool("loginStatus")!;
+        loginStatus = loginValue ?? false;
       });
     } catch (e) {
-      print(e.toString());
+      debugPrint("Login check error: ${e.toString()}");
       setState(() {
         loginStatus = false;
       });

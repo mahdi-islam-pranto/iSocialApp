@@ -1,10 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:isocial/module/ticket/dispositon/LabelDisposition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'DispositonController.dart';
+import 'LabelDisposition.dart';
+
+/*
+  Activity name : Type disposition
+  Project name : iHelpBD CRM
+  Auth : Eng. Sk Nayeem Ur Rahman & pranto
+  Designation : Full Stack Software Developer
+  Email : nayeemdeveloperbd@gmail.com
+*/
 
 class TypeDisposition extends StatefulWidget {
   const TypeDisposition({Key? key}) : super(key: key);
@@ -16,6 +23,7 @@ class TypeDisposition extends StatefulWidget {
 class _TypeDispositionState extends State<TypeDisposition> {
   @override
   void initState() {
+    // TODO: implement initState
     super.initState();
     fetchTypeDispositionData();
   }
@@ -36,7 +44,9 @@ class _TypeDispositionState extends State<TypeDisposition> {
               ),
               child: Center(child: getTypeDisposition()),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(
+              width: 10,
+            ),
             Container(
               height: 40,
               width: MediaQuery.of(context).size.width / 2 - 15,
@@ -48,7 +58,9 @@ class _TypeDispositionState extends State<TypeDisposition> {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(
+          height: 10,
+        ),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -61,7 +73,9 @@ class _TypeDispositionState extends State<TypeDisposition> {
               ),
               child: Center(child: getSubCategoryDisposition()),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(
+              width: 10,
+            ),
             Container(
               height: 40,
               width: MediaQuery.of(context).size.width / 2 - 15,
@@ -73,275 +87,385 @@ class _TypeDispositionState extends State<TypeDisposition> {
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 10)
       ],
     );
   }
 
-  /* ------------------ Type Disposition ------------------ */
+  // /Type Disposition/
+
   List<String> typeDisID = [];
   List<String> typeDisType = [];
   String? typeDropDownValue = " --Type--";
   bool isTypeDisLoading = false;
 
+  //Fetch type disposition data
   void fetchTypeDispositionData() async {
     setState(() {
       isTypeDisLoading = true;
     });
 
-    try {
-      SharedPreferences sharedPreferences =
-          await SharedPreferences.getInstance();
-      String token = sharedPreferences.getString("token") ?? "";
-      String authorizedBy = sharedPreferences.getString("authorized_by") ?? "";
+    //Show progress dialog
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
 
-      String url =
-          'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/type.php';
-      Map<String, String> body = {"authorized_by": authorizedBy};
+    //Get user data from local device
+    String token = sharedPreferences.getString("token").toString();
+    String authorizedBy =
+        sharedPreferences.getString("authorized_by").toString();
 
-      HttpClient httpClient = HttpClient();
-      HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
-      request.headers.set('content-type', 'application/json');
-      request.headers.set('token', token);
-      request.add(utf8.encode(json.encode(body)));
+    // Api url
+    String url =
+        'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/type.php';
 
-      HttpClientResponse response = await request.close();
-      String reply = await response.transform(utf8.decoder).join();
-      httpClient.close();
+    //Request API body
+    Map<String, String> body = {"authorized_by": authorizedBy};
 
-      if (response.statusCode == 200) {
-        final items = json.decode(reply)["data"];
-        setState(() {
-          for (var item in items) {
-            typeDisID.add(item["id"]);
-            typeDisType.add(item["type"]);
+    HttpClient httpClient = HttpClient();
+
+    HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
+
+    // content type
+    request.headers.set('content-type', 'application/json');
+    request.headers.set('token', token);
+
+    request.add(utf8.encode(json.encode(body)));
+
+    //Get response
+    HttpClientResponse response = await request.close();
+    String reply = await response.transform(utf8.decoder).join();
+
+    // Closed request
+    httpClient.close();
+
+    if (response.statusCode == 200) {
+      final items = json.decode(reply)["data"];
+
+      setState(() {
+        try {
+          for (int index = 0; index < items.length; index++) {
+            typeDisID.add(items[index]["id"]);
+            typeDisType.add(items[index]["type"]);
           }
+
           isTypeDisLoading = false;
-        });
-      } else {
-        _addDefaultTypeValues();
-      }
-    } catch (e) {
-      _addDefaultTypeValues();
-    }
-  }
-
-  void _addDefaultTypeValues() {
-    setState(() {
-      typeDisID = ["id"];
-      typeDisType = ["data not found"];
+        } catch (e) {
+          isTypeDisLoading = true;
+        }
+      });
+    } else {
+      typeDisID = [];
+      typeDisType = [];
       isTypeDisLoading = false;
-    });
+    }
   }
 
+  //Show Type dropdown disposition
   Widget getTypeDisposition() {
-    if (isTypeDisLoading) {
-      return const Center(child: CircularProgressIndicator());
+    if (typeDisType.contains(null) ||
+        typeDisID.contains(null) ||
+        isTypeDisLoading) {
+      return const Center(
+          child: CircularProgressIndicator(
+        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+      ));
     }
 
-    var template = [" --Type--"];
-    template.addAll(typeDisType);
+    try {
+      // List of items in our dropdown menu
+      var template = [" --Type--"];
 
-    return DropdownButton(
-      isExpanded: true,
-      value: typeDropDownValue,
-      icon: const Icon(Icons.keyboard_arrow_down),
-      items: template.map((String item) {
-        return DropdownMenuItem(
-            value: item,
-            child: Text(item, style: const TextStyle(fontSize: 13)));
-      }).toList(),
-      onChanged: (newValue) {
-        categoryName.clear();
-        categoryID.clear();
-        isCategoryDisLoading = true;
+      //Add template title
+      template.addAll(typeDisType);
 
-        setState(() {
-          String typeID = typeDisID[typeDisType.indexOf(newValue!)];
-          fetchCategoryDispositionData(typeID);
-          DispositionController.dispositionType = typeID;
-          typeDropDownValue = newValue;
-        });
-      },
-    );
+      return DropdownButton(
+          isExpanded: true,
+          // Initial Value
+          value: typeDropDownValue,
+          icon: const Icon(Icons.keyboard_arrow_down),
+
+          // Array list of items
+          items: template.map((String items) {
+            return DropdownMenuItem(
+              value: items,
+              child: Text(
+                items,
+                style: const TextStyle(fontSize: 13),
+              ),
+            );
+          }).toList(),
+          onChanged: (dynamic newValue) {
+            categoryName.clear();
+            categoryID.clear();
+            isCategoryDisLoading = true;
+
+            setState(() {
+              String dispositionType =
+                  typeDisID[typeDisType.indexOf(newValue)].toString();
+
+              //Fetching Category Disposition data
+              fetchCategoryDispositionData(dispositionType);
+
+              //set disposition type value
+              DispositionController.dispositionType = dispositionType;
+
+              // Assign new dropdown value
+              typeDropDownValue = newValue;
+            });
+          });
+    } catch (e) {
+      return const Text("data not found");
+    }
   }
 
-  /* ------------------ Category Disposition ------------------ */
+  // /Category Disposition/
+
   List<String> categoryID = [];
   List<String> categoryName = [];
   String? categoryDropDownValue = " --Category--";
   bool isCategoryDisLoading = false;
 
+  //Fetch category disposition data
   void fetchCategoryDispositionData(String id) async {
     setState(() {
       isCategoryDisLoading = true;
     });
 
-    try {
-      SharedPreferences sharedPreferences =
-          await SharedPreferences.getInstance();
-      String token = sharedPreferences.getString("token") ?? "";
-      String authorizedBy = sharedPreferences.getString("authorized_by") ?? "";
+    //Show progress dialog
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
 
-      String url =
-          'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/category.php';
-      Map<String, dynamic> body = {
-        "authorized_by": authorizedBy,
-        "type_id": id,
-      };
-      print("category body>>${body}");
+    //Get user data from local device
+    String token = sharedPreferences.getString("token").toString();
+    String authorizedBy =
+        sharedPreferences.getString("authorized_by").toString();
 
-      HttpClient httpClient = HttpClient();
-      HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
-      request.headers.set('content-type', 'application/json');
-      request.headers.set('token', token);
-      request.add(utf8.encode(json.encode(body)));
+    // Api url
+    String url =
+        'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/category.php';
 
-      HttpClientResponse response = await request.close();
-      String reply = await response.transform(utf8.decoder).join();
-      httpClient.close();
+    //Request API body
+    Map<String, dynamic> body = {
+      "authorized_by": authorizedBy,
+      "type_id": id,
+    };
 
-      if (response.statusCode == 200) {
-        final items = json.decode(reply)["data"];
-        setState(() {
-          for (var item in items) {
-            categoryID.add(item["id"]);
-            categoryName.add(item["name"]);
+    HttpClient httpClient = HttpClient();
+
+    HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
+
+    // content type
+    request.headers.set('content-type', 'application/json');
+    request.headers.set('token', token);
+
+    request.add(utf8.encode(json.encode(body)));
+
+    //Get response
+    HttpClientResponse response = await request.close();
+    String reply = await response.transform(utf8.decoder).join();
+
+    // Closed request
+    httpClient.close();
+
+    if (response.statusCode == 200) {
+      setState(() {
+        try {
+          final items = json.decode(reply)["data"];
+          for (int index = 0; index < items.length; index++) {
+            categoryID.add(items[index]["id"]);
+            categoryName.add(items[index]["name"]);
           }
+
           isCategoryDisLoading = false;
-        });
-      } else {
-        _addDefaultCategoryValues();
-      }
-    } catch (e) {
-      _addDefaultCategoryValues();
-    }
-  }
-
-  void _addDefaultCategoryValues() {
-    setState(() {
-      categoryID = ["id"];
-      categoryName = ["data not found"];
+        } catch (e) {
+          //isCategoryDisLoading = true;
+          //categoryID.add("Not Found");
+        }
+      });
+    } else {
+      categoryID = [];
+      categoryName = [];
       isCategoryDisLoading = false;
-    });
+    }
   }
 
+  //Show Category dropdown disposition
   Widget getCategoryDisposition() {
-    if (isCategoryDisLoading) {
-      return const Center(child: CircularProgressIndicator());
+    if (categoryName.contains(null) ||
+        categoryID.contains(null) ||
+        isCategoryDisLoading) {
+      return const Center(
+          child: CircularProgressIndicator(
+        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+      ));
     }
 
-    var template = [" --Category--"];
-    template.addAll(categoryName);
+    try {
+      // List of items in our dropdown menu
+      var template = [" --Category--"];
 
-    return DropdownButton(
-      isExpanded: true,
-      value: categoryDropDownValue,
-      icon: const Icon(Icons.keyboard_arrow_down),
-      items: template.map((String item) {
-        return DropdownMenuItem(
-            value: item,
-            child: Text(item, style: const TextStyle(fontSize: 13)));
-      }).toList(),
-      onChanged: (newValue) {
-        subCategoryID.clear();
-        subCategoryTitle.clear();
-        isSubCategoryDisLoading = true;
+      //Add template title
+      template.addAll(categoryName);
 
-        setState(() {
-          String catID = categoryID[categoryName.indexOf(newValue!)];
-          fetchSubCategoryDispositionData(catID);
-          DispositionController.dispositionCat = catID;
-          categoryDropDownValue = newValue;
-        });
-      },
-    );
+      return DropdownButton(
+          isExpanded: true,
+
+          // Initial Value
+          value: categoryDropDownValue,
+          icon: const Icon(Icons.keyboard_arrow_down),
+
+          // Array list of items
+          items: template.map((String items) {
+            return DropdownMenuItem(
+              value: items,
+              child: Text(
+                items,
+                style: const TextStyle(fontSize: 13),
+              ),
+            );
+          }).toList(),
+          onChanged: (dynamic newValue) {
+            subCategoryID.clear();
+            subCategoryTitle.clear();
+            isSubCategoryDisLoading = true;
+
+            setState(() {
+              String dispositionCat =
+                  categoryID[categoryName.indexOf(newValue)].toString();
+
+              //etching Sub category disposition data
+              fetchSubCategoryDispositionData(dispositionCat);
+
+              //Set disposition category
+              DispositionController.dispositionCat = dispositionCat;
+
+              // Assign new dropdown value
+              categoryDropDownValue = newValue;
+            });
+          });
+    } catch (e) {
+      return const Text("data not found");
+    }
   }
 
-  /* ------------------ SubCategory Disposition ------------------ */
+  // /Sub Category Disposition/
+
   List<String> subCategoryID = [];
   List<String> subCategoryTitle = [];
-  String? subCategoryDropDownValue = " --Subcategory--";
+  String? subCategoryDropDownValue = " --Sub Category--";
   bool isSubCategoryDisLoading = false;
 
+  //Fetch type disposition data
   void fetchSubCategoryDispositionData(String catId) async {
     setState(() {
       isSubCategoryDisLoading = true;
     });
 
-    try {
-      SharedPreferences sharedPreferences =
-          await SharedPreferences.getInstance();
-      String token = sharedPreferences.getString("token") ?? "";
-      String authorizedBy = sharedPreferences.getString("authorized_by") ?? "";
+    //Show progress dialog
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
 
-      String url =
-          'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/sub_category.php';
-      Map<String, dynamic> body = {
-        "authorized_by": authorizedBy,
-        "category_id": catId,
-      };
-      print("subcategory body>>${body}");
+    //Get user data from local device
+    String token = sharedPreferences.getString("token").toString();
+    String authorizedBy =
+        sharedPreferences.getString("authorized_by").toString();
 
-      HttpClient httpClient = HttpClient();
-      HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
-      request.headers.set('content-type', 'application/json');
-      request.headers.set('token', token);
-      request.add(utf8.encode(json.encode(body)));
+    // Api url
+    String url =
+        'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/sub_category.php';
 
-      HttpClientResponse response = await request.close();
-      String reply = await response.transform(utf8.decoder).join();
-      httpClient.close();
+    //Request API body
+    Map<String, dynamic> body = {
+      "authorized_by": authorizedBy,
+      "cat_id": catId,
+    };
 
-      if (response.statusCode == 200) {
-        final items = json.decode(reply)["data"];
-        setState(() {
-          for (var item in items) {
-            subCategoryID.add(item["id"]);
-            subCategoryTitle.add(item["title"]);
+    HttpClient httpClient = HttpClient();
+
+    HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
+
+    // content type
+    request.headers.set('content-type', 'application/json');
+    request.headers.set('token', token);
+
+    request.add(utf8.encode(json.encode(body)));
+
+    //Get response
+    HttpClientResponse response = await request.close();
+    String reply = await response.transform(utf8.decoder).join();
+
+    // Closed request
+    httpClient.close();
+
+    if (response.statusCode == 200) {
+      final items = json.decode(reply)["data"];
+
+      print(items);
+
+      setState(() {
+        try {
+          for (int index = 0; index < items.length; index++) {
+            subCategoryID.add(items[index]["id"]);
+            subCategoryTitle.add(items[index]["sub_cat"]);
           }
+
           isSubCategoryDisLoading = false;
-        });
-      } else {
-        _addDefaultSubCategoryValues();
-      }
-    } catch (e) {
-      _addDefaultSubCategoryValues();
-    }
-  }
-
-  void _addDefaultSubCategoryValues() {
-    setState(() {
-      subCategoryID = ["id"];
-      subCategoryTitle = ["data not found"];
+        } catch (e) {
+          isSubCategoryDisLoading = true;
+        }
+      });
+    } else {
+      subCategoryID = [];
+      subCategoryTitle = [];
       isSubCategoryDisLoading = false;
-    });
+    }
   }
 
+  //Show Type dropdown disposition
   Widget getSubCategoryDisposition() {
-    if (isSubCategoryDisLoading) {
-      return const Center(child: CircularProgressIndicator());
+    if (subCategoryTitle.contains(null) ||
+        subCategoryID.contains(null) ||
+        isSubCategoryDisLoading) {
+      return const Center(
+          child: CircularProgressIndicator(
+        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+      ));
     }
 
-    var template = [" --Subcategory--"];
-    template.addAll(subCategoryTitle);
+    try {
+      // List of items in our dropdown menu
+      var template = [" --Sub Category--"];
 
-    return DropdownButton(
-      isExpanded: true,
-      value: subCategoryDropDownValue,
-      icon: const Icon(Icons.keyboard_arrow_down),
-      items: template.map((String item) {
-        return DropdownMenuItem(
-            value: item,
-            child: Text(item, style: const TextStyle(fontSize: 13)));
-      }).toList(),
-      onChanged: (newValue) {
-        setState(() {
-          String subCatId = subCategoryID[subCategoryTitle.indexOf(newValue!)];
-          DispositionController.dispositionSubCat = subCatId;
-          subCategoryDropDownValue = newValue;
-        });
-      },
-    );
+      //Add template title
+      template.addAll(subCategoryTitle);
+
+      return DropdownButton(
+          isExpanded: true,
+
+          // Initial Value
+          value: subCategoryDropDownValue,
+          icon: const Icon(Icons.keyboard_arrow_down),
+
+          // Array list of items
+          items: template.map((String items) {
+            return DropdownMenuItem(
+              value: items,
+              child: Text(
+                items,
+                style: const TextStyle(fontSize: 13),
+              ),
+            );
+          }).toList(),
+          onChanged: (dynamic newValue) {
+            setState(() {
+              String dispositionSubCat =
+                  subCategoryID[subCategoryTitle.indexOf(newValue)].toString();
+
+              //Set sub category disposition
+              DispositionController.dispositionSubCat = dispositionSubCat;
+
+              subCategoryDropDownValue = newValue;
+            });
+          });
+    } catch (e) {
+      return const Text("data not found");
+    }
   }
 }

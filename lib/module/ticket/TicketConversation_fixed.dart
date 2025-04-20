@@ -362,10 +362,10 @@ class _TicketConversationState extends State<TicketConversation> {
       //clear input text field
 
       controller.sendReplay();
-    } else if (DispositionController.ticketStatus.contains("Closed") ||
-        DispositionController.dispositionType.isNotEmpty ||
-        DispositionController.dispositionCat.isNotEmpty ||
-        DispositionController.dispositionSubCat.isNotEmpty ||
+    } else if (DispositionController.ticketStatus.contains("Closed") &&
+        DispositionController.dispositionType.isNotEmpty &&
+        DispositionController.dispositionCat.isNotEmpty &&
+        DispositionController.dispositionSubCat.isNotEmpty &&
         DispositionController.labelId.isNotEmpty) {
       controller.sendReplay();
 
@@ -698,11 +698,11 @@ class _TicketConversationState extends State<TicketConversation> {
   void _showTransferDialog() {
     // Check if we're still mounted
     if (!mounted) return;
-
+    
     // Start the async process
     _prepareAndShowTransferDialog();
   }
-
+  
   // Helper method to prepare and show the transfer dialog
   Future<void> _prepareAndShowTransferDialog() async {
     try {
@@ -710,10 +710,10 @@ class _TicketConversationState extends State<TicketConversation> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? uniqueId = prefs.getString("uniqueId");
       debugPrint("Current ticket uniqueId: $uniqueId");
-
+      
       if (uniqueId == null || uniqueId.isEmpty) {
         if (!mounted) return;
-
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Cannot transfer ticket: Missing ticket ID'),
@@ -722,19 +722,19 @@ class _TicketConversationState extends State<TicketConversation> {
         );
         return;
       }
-
+      
       // Refresh the agent list
       debugPrint("Opening transfer dialog, fetching fresh agent list");
       controller.agentList.clear();
       await controller.fetchAgentList();
       debugPrint("Agent list fetched, count: ${controller.agentList.length}");
-
+      
       // Check if we're still mounted after the async operations
       if (!mounted) return;
-
+      
       // Selected agent username for the dialog
       String? selectedUsername;
-
+      
       // Now show the dialog with the current context
       showDialog(
         context: context,
@@ -744,7 +744,7 @@ class _TicketConversationState extends State<TicketConversation> {
             content: Obx(() {
               debugPrint(
                   "Dialog Obx rebuilding, loadingAgents: ${controller.loadingAgents.value}, agentList length: ${controller.agentList.length}");
-
+              
               if (controller.loadingAgents.value) {
                 return const SizedBox(
                   height: 100,
@@ -753,7 +753,7 @@ class _TicketConversationState extends State<TicketConversation> {
                   ),
                 );
               }
-
+              
               if (controller.agentList.isEmpty) {
                 debugPrint("Agent list is empty in the dialog");
                 return SizedBox(
@@ -775,7 +775,7 @@ class _TicketConversationState extends State<TicketConversation> {
                   ),
                 );
               }
-
+              
               debugPrint(
                   "Building dropdown with ${controller.agentList.length} agents");
               return StatefulBuilder(
@@ -849,22 +849,6 @@ class _TicketConversationState extends State<TicketConversation> {
                   if (selectedUsername != null) {
                     debugPrint("Transferring ticket to: $selectedUsername");
                     Navigator.pop(dialogContext);
-
-                    // Set the callback for successful transfer
-                    controller.onTransferSuccess = () {
-                      debugPrint("Transfer success callback triggered");
-                      if (mounted) {
-                        // Navigate to ticket list page, but preserve the navigation stack
-                        // First pop back to the previous screen (likely the dashboard)
-                        Navigator.of(context).pop();
-
-                        // Then navigate to the ticket list
-                        Navigator.of(context).push(MaterialPageRoute(
-                            builder: (context) => const TicketList()));
-                      }
-                    };
-
-                    // Call the transfer method
                     controller.transferTicket(selectedUsername!);
                   } else {
                     debugPrint("No agent selected for transfer");
