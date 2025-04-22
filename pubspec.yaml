@@ -70,8 +70,11 @@ dependencies:
   video_player: ^2.8.2
   chewie: ^1.7.5
   path: ^1.8.3
-  android_id: 
-
+  android_id:
+  flutter_local_notifications: 17.2.3
+  connectivity_plus: ^5.0.2
+  rxdart: ^0.27.7
+  workmanager: ^0.5.2
 
 
 # dependency_overrides:

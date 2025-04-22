@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:isocial/domain/service/api_service.dart';
 import 'package:isocial/domain/service/default_response.dart';
+import 'package:isocial/notification_services.dart';
 import 'package:isocial/storage/sharedPrefs.dart';
 import 'package:isocial/utilities/message/message.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,10 +31,15 @@ class TicketController extends GetxController {
   RxList<AgentData> agentList = <AgentData>[].obs;
   RxBool loadingAgents = false.obs;
 
+  // Notification services
+  final NotificationServices _notificationServices = NotificationServices();
+
   @override
   void onInit() {
     loadSavedConversations();
     getTicketConversation();
+    // Initialize notification services
+    _notificationServices.initialize();
     super.onInit();
   }
 
@@ -146,15 +152,30 @@ class TicketController extends GetxController {
           ticketList.value = newList;
           log("Ticket list updated successfully");
 
-          // If auto-refreshing and new tickets found, show a notification
-          if (isAutoRefresh && hasNewTickets) {
-            Get.snackbar(
-              "New Tickets",
-              "New tickets have been received",
-              snackPosition: SnackPosition.TOP,
-              backgroundColor: Colors.green,
-              colorText: Colors.white,
-              duration: const Duration(seconds: 2),
+          // If new tickets found, show a notification
+          if (hasNewTickets) {
+            // Count how many new tickets
+            int newTicketCount = _countNewTickets(ticketList, newList);
+
+            // Log the new tickets
+            log("🔔 NEW TICKETS DETECTED: $newTicketCount new ticket(s)");
+
+            // Show in-app snackbar if it's an auto-refresh
+            if (isAutoRefresh) {
+              Get.snackbar(
+                "New Tickets",
+                "$newTicketCount new ticket(s) have been received",
+                snackPosition: SnackPosition.TOP,
+                backgroundColor: Colors.green,
+                colorText: Colors.white,
+                duration: const Duration(seconds: 2),
+              );
+            }
+
+            // Show system notification regardless of auto-refresh
+            _notificationServices.showNewTicketNotification(
+              count: newTicketCount,
+              ticketInfo: "You have $newTicketCount new ticket(s) waiting",
             );
           }
         } catch (e) {
@@ -201,6 +222,27 @@ class TicketController extends GetxController {
     }
 
     return false;
+  }
+
+  // Helper method to count how many new tickets
+  int _countNewTickets(
+      RxList<TicketListUIModel> oldList, List<TicketListUIModel> newList) {
+    // If this is the first load, consider all tickets as new
+    if (oldList.isEmpty) {
+      return newList.length;
+    }
+
+    // Count tickets with IDs that weren't in the old list
+    Set<String?> oldIds = oldList.map((ticket) => ticket.uniqueId).toSet();
+    int count = 0;
+
+    for (var ticket in newList) {
+      if (!oldIds.contains(ticket.uniqueId)) {
+        count++;
+      }
+    }
+
+    return count;
   }
 
   void sendReplay() async {

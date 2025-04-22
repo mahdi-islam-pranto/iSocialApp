@@ -5,6 +5,7 @@ import 'dart:io';
 // Removed unused import
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:isocial/notification_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /*
@@ -53,6 +54,7 @@ class _RealTimeDataState extends State<RealTimeData> {
   List counterValue = [];
   List counterKey = [];
   bool isLoading = false;
+  final NotificationServices _notificationServices = NotificationServices();
 
   @override
   void initState() {
@@ -61,6 +63,8 @@ class _RealTimeDataState extends State<RealTimeData> {
     _activeInstances.add(this);
     developer.log(
         '🔄 REALTIME DATA: Instance registered (total: ${_activeInstances.length})');
+    // Initialize notification services
+    _notificationServices.initialize();
     fetchCounterValueData();
   }
 
@@ -130,9 +134,7 @@ class _RealTimeDataState extends State<RealTimeData> {
     };
 
     developer.log('📤 REALTIME DATA: Sending request with body: $body');
-
     HttpClient httpClient = HttpClient();
-
     HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
 
     // content type
@@ -223,6 +225,19 @@ class _RealTimeDataState extends State<RealTimeData> {
             bool hasChanges = false;
             String changesLog = '\n\n🔴 DATA CHANGES DETECTED:';
 
+            // Check specifically for new ticket changes
+            int newTicketIndex = -1;
+            for (int i = 0; i < counterKey.length; i++) {
+              if (counterKey[i] == "New") {
+                newTicketIndex = i;
+                break;
+              }
+            }
+
+            // Track if new tickets increased
+            bool newTicketsIncreased = false;
+            int newTicketDifference = 0;
+
             for (int i = 0; i < counterValue.length; i++) {
               if (oldCounterValue[i] != counterValue[i]) {
                 hasChanges = true;
@@ -230,6 +245,15 @@ class _RealTimeDataState extends State<RealTimeData> {
                     '\n   ${counterKey[i]}: ${oldCounterValue[i]} → ${counterValue[i]}';
                 developer.log(
                     '🔄 REALTIME DATA: ${counterKey[i]} changed from ${oldCounterValue[i]} to ${counterValue[i]}');
+
+                // Check if this is the new ticket count and it increased
+                if (i == newTicketIndex &&
+                    counterValue[i] > oldCounterValue[i]) {
+                  newTicketsIncreased = true;
+                  newTicketDifference = counterValue[i] - oldCounterValue[i];
+                  developer.log(
+                      '🔔 NEW TICKETS DETECTED: $newTicketDifference new ticket(s)');
+                }
               }
             }
 
@@ -237,6 +261,15 @@ class _RealTimeDataState extends State<RealTimeData> {
               changesLog +=
                   '\n\n🔴 This confirms the auto-refresh is working and updating data!';
               developer.log(changesLog);
+
+              // Show notification if new tickets increased
+              if (newTicketsIncreased && newTicketDifference > 0) {
+                _notificationServices.showNewTicketNotification(
+                  count: newTicketDifference,
+                  ticketInfo:
+                      "You have $newTicketDifference new ticket(s) waiting",
+                );
+              }
             } else {
               developer
                   .log('\n\n🔵 NO DATA CHANGES: Values are the same as before');
