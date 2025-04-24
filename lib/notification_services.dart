@@ -109,7 +109,7 @@ class NotificationServices {
   // Initialize local notifications
   Future<void> _initializeLocalNotifications() async {
     const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@drawable/ic_stat_notification');
 
     final DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings(
@@ -263,7 +263,8 @@ class NotificationServices {
         priority: Priority.high,
         playSound: playSound,
         enableVibration: true,
-        icon: '@mipmap/ic_launcher',
+        icon: '@drawable/ic_stat_notification',
+        largeIcon: const DrawableResourceAndroidBitmap('@drawable/app_logo'),
       );
 
       final DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
