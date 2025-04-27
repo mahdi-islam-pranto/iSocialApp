@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_fontellico_progress_dialog/simple_fontico_loading.dart';
 
 import '../constant.dart';
+import '../notification_services.dart';
 import '../view/Dashboard.dart';
 
 /*
@@ -401,17 +402,22 @@ class _loginPageState extends State<LoginScreen> {
       // device id
       const _androidIdPlugin = AndroidId();
 
+      // get fcm device token
+      String? deviceToken = await NotificationServices().getDeviceToken();
+
       final String? androidId = await _androidIdPlugin.getId();
       print("Andriod Id:> ${androidId}");
 
       Map<String, dynamic> body = {
         "email": email,
         "password": password,
-        "device_id": androidId
+        "device_id": androidId,
+        "device_token": deviceToken
       };
 
-      HttpClient httpClient = HttpClient();
+      print("body login${body}");
 
+      HttpClient httpClient = HttpClient();
       HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
 
       // content type
