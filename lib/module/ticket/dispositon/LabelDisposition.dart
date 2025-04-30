@@ -1,10 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../../static-variable/StaticVariables.dart';
 import 'DispositonController.dart';
 
 /*
@@ -115,7 +112,7 @@ class _LabelDispositionState extends State<LabelDisposition> {
 
     return DropdownButton(
         isExpanded: true,
-
+        underline: SizedBox(),
         // Initial Value
         value: labelDropDownValue,
         icon: const Icon(Icons.keyboard_arrow_down),

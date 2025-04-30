@@ -92,7 +92,7 @@ class _TypeDispositionState extends State<TypeDisposition> {
     );
   }
 
-  // /Type Disposition/
+  //Type Disposition
 
   List<String> typeDisID = [];
   List<String> typeDisType = [];
@@ -161,13 +161,30 @@ class _TypeDispositionState extends State<TypeDisposition> {
 
   //Show Type dropdown disposition
   Widget getTypeDisposition() {
-    if (typeDisType.contains(null) ||
-        typeDisID.contains(null) ||
-        isTypeDisLoading) {
+    // if (typeDisType.contains(null) || typeDisID.contains(null) || isTypeDisLoading) {
+    //   return const Center(
+    //       child: CircularProgressIndicator(
+    //         valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+    //       ));
+    // }
+
+    if (isTypeDisLoading) {
       return const Center(
-          child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-      ));
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+        ),
+      );
+    } else if (typeDisType.contains(null) || typeDisID.contains(null)) {
+      return const Center(
+        child: Text(
+          'data not found',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
     }
 
     try {
@@ -178,6 +195,7 @@ class _TypeDispositionState extends State<TypeDisposition> {
       template.addAll(typeDisType);
 
       return DropdownButton(
+          underline: SizedBox(),
           isExpanded: true,
           // Initial Value
           value: typeDropDownValue,
@@ -217,7 +235,7 @@ class _TypeDispositionState extends State<TypeDisposition> {
     }
   }
 
-  // /Category Disposition/
+  // Category Disposition
 
   List<String> categoryID = [];
   List<String> categoryName = [];
@@ -289,13 +307,23 @@ class _TypeDispositionState extends State<TypeDisposition> {
 
   //Show Category dropdown disposition
   Widget getCategoryDisposition() {
-    if (categoryName.contains(null) ||
-        categoryID.contains(null) ||
-        isCategoryDisLoading) {
+    if (isCategoryDisLoading) {
       return const Center(
-          child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-      ));
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+        ),
+      );
+    } else if (categoryName.contains(null) || categoryID.contains(null)) {
+      return const Center(
+        child: Text(
+          'data not found',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
     }
 
     try {
@@ -307,6 +335,7 @@ class _TypeDispositionState extends State<TypeDisposition> {
 
       return DropdownButton(
           isExpanded: true,
+          underline: SizedBox(),
 
           // Initial Value
           value: categoryDropDownValue,
@@ -420,13 +449,24 @@ class _TypeDispositionState extends State<TypeDisposition> {
 
   //Show Type dropdown disposition
   Widget getSubCategoryDisposition() {
-    if (subCategoryTitle.contains(null) ||
-        subCategoryID.contains(null) ||
-        isSubCategoryDisLoading) {
+    if (isSubCategoryDisLoading) {
       return const Center(
-          child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-      ));
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+        ),
+      );
+    } else if (subCategoryTitle.contains(null) ||
+        subCategoryID.contains(null)) {
+      return const Center(
+        child: Text(
+          'data not found',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
     }
 
     try {
@@ -438,6 +478,7 @@ class _TypeDispositionState extends State<TypeDisposition> {
 
       return DropdownButton(
           isExpanded: true,
+          underline: SizedBox(),
 
           // Initial Value
           value: subCategoryDropDownValue,

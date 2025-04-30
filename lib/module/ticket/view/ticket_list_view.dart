@@ -4,18 +4,12 @@ import 'package:get/get.dart';
 import 'package:isocial/module/ticket/controller/ticket_controller.dart';
 import 'package:isocial/module/ticket/dispositon/DispositonController.dart';
 import 'package:isocial/module/ticket/model/ticket_list_response.dart';
-import 'package:isocial/storage/sharedPrefs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../storage/sharedPrefs.dart';
 import '../TicketConversation.dart';
 import '../controller/auto_loader_controller.dart';
-
-/*
-  Activity name : TicketList activity
-  Project name : iHelpBD CRM
-  Auth : Eng.Sk Nayeem Ur Rahman
-  Designation : Full Stack Software Developer
-  Email : nayeemdeveloper@gmail.com
-*/
+import '../whatsapp/model/wa_list_model.dart';
+import '../whatsapp/wahtsapp_ticket_conversation.dart';
 
 class TicketList extends StatefulWidget {
   const TicketList({Key? key}) : super(key: key);
@@ -32,20 +26,19 @@ class _TicketListState extends State<TicketList> {
   void initState() {
     super.initState();
     controller.fetchTicketList();
+    controller.fetchwaTicketList();
+
     controller.conversationBoxScrollToBottom();
 
-    // Initialize and start the auto-loader for ticket list
     autoLoaderController = AutoLoaderController();
     autoLoaderController.ticketListLoader();
+    autoLoaderController.waTicketListLoader();
 
-    // Check if we have a success message to show
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // First check if we have arguments from Get navigation
       if (Get.arguments != null && Get.arguments is Map) {
         final args = Get.arguments as Map;
         if (args.containsKey('showSnackbar') && args['showSnackbar'] == true) {
           final message = args['message'] as String? ?? 'Operation successful';
-          // Show success snackbar
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(message),
@@ -53,15 +46,13 @@ class _TicketListState extends State<TicketList> {
               duration: const Duration(seconds: 3),
             ),
           );
-          return; // Don't check SharedPrefs if we already showed a snackbar
+          return;
         }
       }
 
-      // Then check if we have a success message in SharedPrefs
       String? transferMessage =
           SharedPrefs.getString("transfer_success_message");
       if (transferMessage != null && transferMessage.isNotEmpty) {
-        // Show success snackbar
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(transferMessage),
@@ -69,7 +60,6 @@ class _TicketListState extends State<TicketList> {
             duration: const Duration(seconds: 3),
           ),
         );
-        // Clear the message so it doesn't show again
         SharedPrefs.remove("transfer_success_message");
       }
     });
@@ -77,7 +67,6 @@ class _TicketListState extends State<TicketList> {
 
   @override
   void dispose() {
-    // Clean up resources when widget is disposed
     autoLoaderController.dispose();
     super.dispose();
   }
@@ -103,10 +92,7 @@ class _TicketListState extends State<TicketList> {
               ],
             )),
         leading: IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios,
-              size: 18.sp,
-            ),
+            icon: Icon(Icons.arrow_back_ios, size: 18.sp),
             onPressed: () {
               Navigator.pop(context);
             }),
@@ -115,7 +101,6 @@ class _TicketListState extends State<TicketList> {
             padding: const EdgeInsets.all(8.0),
             child: IconButton(
               onPressed: () {
-                // Refresh ticket list with error handling
                 try {
                   controller.fetchTicketList(isAutoRefresh: false);
                 } catch (e) {
@@ -139,117 +124,194 @@ class _TicketListState extends State<TicketList> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (controller.ticketList.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "No tickets found",
-                  style: TextStyle(fontSize: 18.sp, color: Colors.grey),
-                ),
-                SizedBox(height: 20.h),
-                ElevatedButton(
-                  onPressed: () => controller.fetchTicketList(),
-                  child: const Text("Refresh"),
-                ),
-              ],
-            ),
-          );
-        }
-
         return RefreshIndicator(
           onRefresh: () async {
-            await Future.delayed(Duration.zero);
             controller.fetchTicketList();
           },
-          child: ListView.separated(
-              controller: controller.scrollController,
-              itemBuilder: (_, index) {
-                TicketListUIModel ticket = controller.ticketList[index];
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                children: [
+                  /// Facebook Ticket Section
+                  if (controller.ticketList.isNotEmpty) ...[
+                    // Align(
+                    //   alignment: Alignment.centerLeft,
+                    //   child: Text("Facebook Tickets",
+                    //       style: TextStyle(
+                    //           fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                    // ),
+                    // const SizedBox(height: 10),
+                    ...controller.ticketList
+                        .map((ticket) => buildFacebookTicket(ticket))
+                        .toList(),
+                  ] else
+                    buildEmptySection(""),
 
-                return Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                  decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      border: Border.all(color: Colors.grey, width: 0.5)),
-                  child: ListTile(
-                    // show ticket conversation
-                    onTap: () async {
-                      //set static variable
-                      DispositionController.replayDataType =
-                          ticket.dataType ?? "";
+                  // const SizedBox(height: 30),
 
-                      SharedPreferences ref =
-                          await SharedPreferences.getInstance();
-
-                      ref.setString("uniqueId", ticket.uniqueId ?? "");
-                      ref.setString("dataType", ticket.dataType ?? "");
-                      ref.setString("commentId", ticket.commentId ?? "");
-                      ref.setString("pageId", ticket.pageId ?? "");
-                      ref.setString("name", ticket.name ?? "");
-
-                      if (context.mounted) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (context) => TicketConversation(
-                                    fullName: ticket.userName ?? "",
-                                    dataType: ticket.dataType ?? "",
-                                    // name
-                                    pageName: ticket.name ?? "",
-                                  )),
-                        );
-                      }
-                    },
-
-                    title: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            ticket.userName ?? "",
-                            maxLines: 1,
-                            style: TextStyle(fontSize: 17.sp),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              width: 0.5.w,
-                              color: Colors.indigo,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(ticket.status ?? "",
-                              style: TextStyle(
-                                  color: Colors.indigo, fontSize: 12.sp)),
-                        )
-                      ],
-                    ),
-
-                    subtitle: Row(
-                      children: [
-                        Text(
-                          ticket.dataType ?? "",
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                        Text(
-                          " (${ticket.name ?? ""})",
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-              separatorBuilder: (_, __) {
-                return const SizedBox(height: 8);
-              },
-              itemCount: controller.ticketList.length),
+                  /// WhatsApp Ticket Section
+                  if (controller.waTicketList.isNotEmpty) ...[
+                    // Align(
+                    //   alignment: Alignment.centerLeft,
+                    //   child: Text("WhatsApp Tickets",
+                    //       style: TextStyle(
+                    //           fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                    // ),
+                    // const SizedBox(height: 10),
+                    ...controller.waTicketList
+                        .map((wa) => buildWaTicket(wa))
+                        .toList(),
+                  ] else
+                    buildEmptySection(""),
+                ],
+              ),
+            ),
+          ),
         );
       }),
+    );
+  }
+
+  Widget buildEmptySection(String message) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Center(
+        child: Text(
+          message,
+          style: TextStyle(fontSize: 15.sp, color: Colors.grey),
+        ),
+      ),
+    );
+  }
+
+  Widget buildFacebookTicket(TicketListUIModel ticket) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.grey, width: 0.5),
+      ),
+      child: ListTile(
+        leading: Icon(Icons.facebook, color: Colors.blue, size: 25.sp),
+        onTap: () async {
+          DispositionController.replayDataType = ticket.dataType ?? "";
+          SharedPreferences ref = await SharedPreferences.getInstance();
+          ref.setString("uniqueId", ticket.uniqueId ?? "");
+          ref.setString("dataType", ticket.dataType ?? "");
+          ref.setString("commentId", ticket.commentId ?? "");
+          ref.setString("pageId", ticket.pageId ?? "");
+          ref.setString("name", ticket.name ?? "");
+
+          if (context.mounted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => TicketConversation(
+                  fullName: ticket.userName ?? "",
+                  dataType: ticket.dataType ?? "",
+                  pageName: ticket.name ?? "",
+                ),
+              ),
+            );
+          }
+        },
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(ticket.userName ?? "",
+                  maxLines: 1, style: TextStyle(fontSize: 17.sp)),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              decoration: BoxDecoration(
+                border: Border.all(width: 0.5.w, color: Colors.indigo),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                ticket.status ?? "",
+                style: TextStyle(color: Colors.indigo, fontSize: 12.sp),
+              ),
+            )
+          ],
+        ),
+        subtitle: Row(
+          children: [
+            Text(ticket.dataType ?? "",
+                style: const TextStyle(color: Colors.grey)),
+            Text(" (${ticket.name ?? ""})",
+                style: const TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildWaTicket(WaTicketModel waTicket) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.grey, width: 0.5),
+      ),
+      child: ListTile(
+        leading: const CircleAvatar(
+          radius: 15,
+          backgroundImage: AssetImage("assets/images/wa.jpg"),
+        ),
+        onTap: () async {
+          DispositionController.replayDataType = waTicket.userName ?? "";
+          SharedPreferences ref = await SharedPreferences.getInstance();
+          ref.setString("waId", waTicket.waId ?? "");
+          ref.setString("assignUser", waTicket.assignUser ?? "");
+          ref.setString("userName", waTicket.userName ?? "");
+          ref.setString(
+              "displayPhoneNumber", waTicket.displayPhoneNumber ?? "");
+          ref.setString("phoneNumberId", waTicket.phoneNumberId ?? "");
+
+          if (context.mounted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => WhatsappConversion(
+                  userName: waTicket.userName ?? "",
+                  pageNumber: waTicket.displayPhoneNumber ?? "",
+                  assignUser: waTicket.assignUser ?? "",
+                  wa_id: waTicket.waId,
+                ),
+              ),
+            );
+          }
+        },
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(waTicket.userName ?? "",
+                  maxLines: 1, style: TextStyle(fontSize: 17.sp)),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              decoration: BoxDecoration(
+                border: Border.all(width: 0.5.w, color: Colors.indigo),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                waTicket.status ?? "",
+                style: TextStyle(color: Colors.indigo, fontSize: 12.sp),
+              ),
+            )
+          ],
+        ),
+        subtitle: Row(
+          children: [
+            Text(waTicket.waId ?? "",
+                style: const TextStyle(color: Colors.grey)),
+            Text(" (${waTicket.assignUser ?? ""})",
+                style: const TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
     );
   }
 }

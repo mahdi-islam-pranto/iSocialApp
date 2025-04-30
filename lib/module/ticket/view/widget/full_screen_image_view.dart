@@ -46,7 +46,7 @@ class FullScreenImageView extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Close button
           Positioned(
             top: 40,
@@ -74,11 +74,11 @@ class FullScreenImageView extends StatelessWidget {
 
   Widget _buildImage() {
     if (localFilePath != null && localFilePath!.isNotEmpty) {
-      return Image.file(
-        File(localFilePath!),
+      return Image.network(
+        imageUrl!,
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) {
-          debugPrint("Error loading local image: $error");
+          debugPrint("Error loading local image100: $error");
           return const Center(
             child: Text(
               "Error loading image",
