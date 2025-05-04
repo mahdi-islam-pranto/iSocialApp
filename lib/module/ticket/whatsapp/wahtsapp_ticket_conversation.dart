@@ -13,6 +13,7 @@ import '../controller/auto_loader_controller.dart';
 import '../dispositon/DispositonController.dart';
 import '../dispositon/TemplateDisposition.dart';
 import '../dispositon/TypeDisposition.dart';
+import '../view/ticket_list_view.dart';
 import '../view/widget/attachment_preview_dialog.dart';
 import 'widget/wa_owner_messageTile.dart';
 import 'widget/wa_user_message_Tile.dart';
@@ -112,17 +113,17 @@ class _WhatsappConversionState extends State<WhatsappConversion> {
 
               SizedBox(width: 10.w),
               // transfer button
-              // OutlinedButton(
-              //   onPressed: () {
-              //     _showTransferDialog();
-              //   },
-              //   style: OutlinedButton.styleFrom(
-              //     padding: const EdgeInsets.all(2),
-              //     minimumSize: Size.zero,
-              //     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              //   ),
-              //   child: const Text("Transfer"),
-              // )
+              OutlinedButton(
+                onPressed: () {
+                  _showTransferDialog();
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.all(2),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text("Transfer"),
+              )
             ],
           ),
           leading: IconButton(
@@ -898,16 +899,16 @@ class _WhatsappConversionState extends State<WhatsappConversion> {
                       if (mounted) {
                         // Navigate to ticket list page, but preserve the navigation stack
                         // First pop back to the previous screen (likely the dashboard)
-                        // Navigator.of(context).pop();
-                        //
-                        // // Then navigate to the ticket list
-                        // Navigator.of(context).push(MaterialPageRoute(
-                        //     builder: (context) => const TicketList()));
+                        Navigator.of(context).pop();
+
+                        // Then navigate to the ticket list
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (context) => const TicketList()));
                       }
                     };
 
                     // Call the transfer method
-                    controller.transferTicket(selectedUsername!);
+                    controller.watransferTicket(selectedUsername!);
                   } else {
                     debugPrint("No agent selected for transfer");
                     ScaffoldMessenger.of(dialogContext).showSnackBar(

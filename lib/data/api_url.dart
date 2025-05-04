@@ -32,4 +32,7 @@ class ApiUrls {
 
   static const String whatsAppBaseUrl =
       'https://omni.ihelpbd.com/ihelpbd_social_development/';
+
+  // watsapp Ticket transfer
+  static String waTransferTicketUrl = '$baseUrl/wa_transfer_ticket.php';
 }

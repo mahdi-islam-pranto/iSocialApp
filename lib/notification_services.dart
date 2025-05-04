@@ -304,7 +304,7 @@ class NotificationServices {
   }) async {
     final String title = 'New Ticket${count > 1 ? 's' : ''}';
     final String body = count > 1
-        ? 'You have $count new tickets waiting'
+        ? 'You have $count tickets waiting'
         : 'You have a new ticket waiting';
 
     final Map<String, dynamic> data = {

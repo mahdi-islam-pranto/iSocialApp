@@ -99,7 +99,7 @@ class _TicketConversationState extends State<TicketConversation> {
                   color: Colors.black,
                 ),
               )),
-              Row(
+              Column(
                 children: [
                   Text(
                     " (${widget.dataType})",

@@ -1080,4 +1080,94 @@ class TicketController extends GetxController {
       uploadingAttachment.value = false;
     }
   }
+
+  // watsapp transfer
+  Future<void> watransferTicket(String username) async {
+    // Variable to track if we need to show a loading dialog
+    bool showLoading = true;
+
+    try {
+      // Log parameters for debugging
+      // String? uniqueId = SharedPrefs.getString("uniqueId");
+      String? token = SharedPrefs.getString("token");
+      String? displyPhoneNum = SharedPrefs.getString("displayPhoneNumber");
+      String? waId = SharedPrefs.getString("waId");
+
+      // Prepare request body with all required parameters
+      Map<String, String> body = {
+        "display_phone_number": displyPhoneNum.toString(),
+        "wa_id": waId.toString(),
+        "username": username,
+      };
+      print("wa transfer body:${body}");
+
+      Map<String, dynamic> header = {
+        "content-type": "application/json",
+        "token": token ?? "",
+      };
+
+      log("WaTransfer ticket API URL: ${ApiUrls.waTransferTicketUrl}");
+      log("Transfer ticket API body: $body");
+      log("Transfer ticket API headers: $header");
+
+      // Call the transfer ticket API
+      DefaultResponse defaultResponse = await ApiService.post(
+          url: ApiUrls.waTransferTicketUrl, body: body, header: header);
+
+      // Close loading dialog safely
+      if (showLoading &&
+          Get.context != null &&
+          Navigator.canPop(Get.context!)) {
+        Navigator.of(Get.context!).pop();
+      }
+
+      log("Transfer ticket API response success: ${defaultResponse.success}");
+      log("Transfer ticket API response: ${defaultResponse.response}");
+
+      if (defaultResponse.success) {
+        log("Transfer successful, navigating to ticket list");
+
+        // Store the success message in a static variable that will be accessed by TicketList
+        SharedPrefs.setString("transfer_success_message",
+            "Ticket transferred successfully to $username");
+
+        // Use a callback to navigate from the UI layer
+        // This avoids the contextless navigation issue
+        if (onTransferSuccess != null) {
+          log("Calling onTransferSuccess callback");
+          onTransferSuccess!();
+        } else {
+          log("No onTransferSuccess callback provided");
+        }
+      } else {
+        // Safely access the error message
+        String errorMessage = "Failed to transfer ticket";
+        try {
+          if (defaultResponse.response.containsKey('message')) {
+            errorMessage = defaultResponse.response['message'] ?? errorMessage;
+          } else if (defaultResponse.response.containsKey('data')) {
+            // Some APIs return error messages in the 'data' field
+            errorMessage =
+                defaultResponse.response['data']?.toString() ?? errorMessage;
+          }
+        } catch (e) {
+          log("Error accessing response message: $e");
+        }
+
+        log("waTransfer failed with error: $errorMessage");
+        showBasicFailedSnackBar(message: errorMessage);
+      }
+    } catch (e, stackTrace) {
+      // Close loading dialog safely if open
+      if (showLoading &&
+          Get.context != null &&
+          Navigator.canPop(Get.context!)) {
+        Navigator.of(Get.context!).pop();
+      }
+
+      log("Error watransferring ticket: $e");
+      log("Stack trace: $stackTrace");
+      showBasicFailedSnackBar(message: "Error watransferring ticket: $e");
+    }
+  }
 }
