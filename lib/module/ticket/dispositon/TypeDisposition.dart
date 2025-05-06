@@ -92,7 +92,7 @@ class _TypeDispositionState extends State<TypeDisposition> {
     );
   }
 
-  //Type Disposition
+  // /Type Disposition/
 
   List<String> typeDisID = [];
   List<String> typeDisType = [];
@@ -235,7 +235,7 @@ class _TypeDispositionState extends State<TypeDisposition> {
     }
   }
 
-  // Category Disposition
+  // /Category Disposition/
 
   List<String> categoryID = [];
   List<String> categoryName = [];
@@ -246,63 +246,56 @@ class _TypeDispositionState extends State<TypeDisposition> {
   void fetchCategoryDispositionData(String id) async {
     setState(() {
       isCategoryDisLoading = true;
+      categoryID.clear();
+      categoryName.clear();
+      categoryDropDownValue = " --Category--";
     });
 
-    //Show progress dialog
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-
-    //Get user data from local device
     String token = sharedPreferences.getString("token").toString();
     String authorizedBy =
         sharedPreferences.getString("authorized_by").toString();
 
-    // Api url
     String url =
         'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/category.php';
 
-    //Request API body
     Map<String, dynamic> body = {
       "authorized_by": authorizedBy,
       "type_id": id,
     };
 
     HttpClient httpClient = HttpClient();
-
     HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
-
-    // content type
     request.headers.set('content-type', 'application/json');
     request.headers.set('token', token);
-
     request.add(utf8.encode(json.encode(body)));
 
-    //Get response
     HttpClientResponse response = await request.close();
     String reply = await response.transform(utf8.decoder).join();
-
-    // Closed request
     httpClient.close();
 
-    if (response.statusCode == 200) {
-      setState(() {
-        try {
-          final items = json.decode(reply)["data"];
+    setState(() {
+      if (response.statusCode == 200) {
+        final decoded = json.decode(reply);
+        final items = decoded["data"];
+
+        if (items is List) {
           for (int index = 0; index < items.length; index++) {
             categoryID.add(items[index]["id"]);
             categoryName.add(items[index]["name"]);
           }
-
-          isCategoryDisLoading = false;
-        } catch (e) {
-          //isCategoryDisLoading = true;
-          //categoryID.add("Not Found");
+        } else {
+          // If "data" is not a list (like "No data found")
+          categoryID = [];
+          categoryName = [];
         }
-      });
-    } else {
-      categoryID = [];
-      categoryName = [];
+      } else {
+        categoryID = [];
+        categoryName = [];
+      }
+
       isCategoryDisLoading = false;
-    }
+    });
   }
 
   //Show Category dropdown disposition
@@ -313,66 +306,46 @@ class _TypeDispositionState extends State<TypeDisposition> {
           valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
         ),
       );
-    } else if (categoryName.contains(null) || categoryID.contains(null)) {
-      return const Center(
-        child: Text(
-          'data not found',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      );
     }
 
-    try {
-      // List of items in our dropdown menu
-      var template = [" --Category--"];
+    List<String> dropdownItems = [" --Category--"];
+    dropdownItems.addAll(categoryName);
 
-      //Add template title
-      template.addAll(categoryName);
+    return DropdownButton(
+      isExpanded: true,
+      underline: const SizedBox(),
+      value: categoryDropDownValue,
+      icon: const Icon(Icons.keyboard_arrow_down),
+      items: dropdownItems.map((String item) {
+        return DropdownMenuItem(
+          value: item,
+          child: Text(item, style: const TextStyle(fontSize: 13)),
+        );
+      }).toList(),
+      onChanged: (dynamic newValue) {
+        if (newValue == " --Category--") {
+          // Default value, don't do anything
+          return;
+        }
 
-      return DropdownButton(
-          isExpanded: true,
-          underline: SizedBox(),
+        setState(() {
+          subCategoryID.clear();
+          subCategoryTitle.clear();
+          isSubCategoryDisLoading = true;
 
-          // Initial Value
-          value: categoryDropDownValue,
-          icon: const Icon(Icons.keyboard_arrow_down),
+          int index = categoryName.indexOf(newValue);
+          if (index != -1) {
+            String dispositionCat = categoryID[index];
+            fetchSubCategoryDispositionData(dispositionCat);
+            DispositionController.dispositionCat = dispositionCat;
+          } else {
+            DispositionController.dispositionCat = "";
+          }
 
-          // Array list of items
-          items: template.map((String items) {
-            return DropdownMenuItem(
-              value: items,
-              child: Text(
-                items,
-                style: const TextStyle(fontSize: 13),
-              ),
-            );
-          }).toList(),
-          onChanged: (dynamic newValue) {
-            subCategoryID.clear();
-            subCategoryTitle.clear();
-            isSubCategoryDisLoading = true;
-
-            setState(() {
-              String dispositionCat =
-                  categoryID[categoryName.indexOf(newValue)].toString();
-
-              //etching Sub category disposition data
-              fetchSubCategoryDispositionData(dispositionCat);
-
-              //Set disposition category
-              DispositionController.dispositionCat = dispositionCat;
-
-              // Assign new dropdown value
-              categoryDropDownValue = newValue;
-            });
-          });
-    } catch (e) {
-      return const Text("data not found");
-    }
+          categoryDropDownValue = newValue;
+        });
+      },
+    );
   }
 
   // /Sub Category Disposition/
@@ -386,64 +359,57 @@ class _TypeDispositionState extends State<TypeDisposition> {
   void fetchSubCategoryDispositionData(String catId) async {
     setState(() {
       isSubCategoryDisLoading = true;
+      subCategoryID.clear();
+      subCategoryTitle.clear();
+      subCategoryDropDownValue = " --Sub Category--";
     });
 
-    //Show progress dialog
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
 
-    //Get user data from local device
     String token = sharedPreferences.getString("token").toString();
     String authorizedBy =
         sharedPreferences.getString("authorized_by").toString();
 
-    // Api url
     String url =
         'https://omni.ihelpbd.com/ihelpbd_social_development/api/v1/sub_category.php';
 
-    //Request API body
     Map<String, dynamic> body = {
       "authorized_by": authorizedBy,
       "cat_id": catId,
     };
 
     HttpClient httpClient = HttpClient();
-
     HttpClientRequest request = await httpClient.postUrl(Uri.parse(url));
-
-    // content type
     request.headers.set('content-type', 'application/json');
     request.headers.set('token', token);
-
     request.add(utf8.encode(json.encode(body)));
 
-    //Get response
     HttpClientResponse response = await request.close();
     String reply = await response.transform(utf8.decoder).join();
-
-    // Closed request
     httpClient.close();
 
-    if (response.statusCode == 200) {
-      final items = json.decode(reply)["data"];
-
-      print(items);
-
-      setState(() {
-        try {
-          for (int index = 0; index < items.length; index++) {
-            subCategoryID.add(items[index]["id"]);
-            subCategoryTitle.add(items[index]["sub_cat"]);
-          }
-
-          isSubCategoryDisLoading = false;
-        } catch (e) {
-          isSubCategoryDisLoading = true;
-        }
-      });
-    } else {
-      subCategoryID = [];
-      subCategoryTitle = [];
+    setState(() {
       isSubCategoryDisLoading = false;
+    });
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(reply);
+
+      if (decoded["status"] == "200" && decoded["data"] is List) {
+        final items = decoded["data"];
+        for (var item in items) {
+          subCategoryID.add(item["id"]);
+          subCategoryTitle.add(item["sub_cat"]);
+        }
+      } else {
+        // No data found or not a list
+        subCategoryID.clear();
+        subCategoryTitle.clear();
+      }
+    } else {
+      // Error case
+      subCategoryID.clear();
+      subCategoryTitle.clear();
     }
   }
 
@@ -455,58 +421,35 @@ class _TypeDispositionState extends State<TypeDisposition> {
           valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
         ),
       );
-    } else if (subCategoryTitle.contains(null) ||
-        subCategoryID.contains(null)) {
-      return const Center(
-        child: Text(
-          'data not found',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      );
     }
 
-    try {
-      // List of items in our dropdown menu
-      var template = [" --Sub Category--"];
+    // Initial option
+    List<String> dropdownOptions = [" --Sub Category--"];
+    dropdownOptions.addAll(subCategoryTitle); // Only adds if data exists
 
-      //Add template title
-      template.addAll(subCategoryTitle);
+    return DropdownButton(
+      isExpanded: true,
+      underline: const SizedBox(),
+      value: subCategoryDropDownValue,
+      icon: const Icon(Icons.keyboard_arrow_down),
+      items: dropdownOptions.map((String item) {
+        return DropdownMenuItem(
+          value: item,
+          child: Text(item, style: const TextStyle(fontSize: 13)),
+        );
+      }).toList(),
+      onChanged: (dynamic newValue) {
+        setState(() {
+          subCategoryDropDownValue = newValue;
 
-      return DropdownButton(
-          isExpanded: true,
-          underline: SizedBox(),
-
-          // Initial Value
-          value: subCategoryDropDownValue,
-          icon: const Icon(Icons.keyboard_arrow_down),
-
-          // Array list of items
-          items: template.map((String items) {
-            return DropdownMenuItem(
-              value: items,
-              child: Text(
-                items,
-                style: const TextStyle(fontSize: 13),
-              ),
-            );
-          }).toList(),
-          onChanged: (dynamic newValue) {
-            setState(() {
-              String dispositionSubCat =
-                  subCategoryID[subCategoryTitle.indexOf(newValue)].toString();
-
-              //Set sub category disposition
-              DispositionController.dispositionSubCat = dispositionSubCat;
-
-              subCategoryDropDownValue = newValue;
-            });
-          });
-    } catch (e) {
-      return const Text("data not found");
-    }
+          int index = subCategoryTitle.indexOf(newValue);
+          if (index != -1) {
+            DispositionController.dispositionSubCat = subCategoryID[index];
+          } else {
+            DispositionController.dispositionSubCat = "";
+          }
+        });
+      },
+    );
   }
 }

@@ -1,3 +1,7 @@
+import 'dart:io';
+import 'dart:developer' as developer;
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,6 +38,26 @@ void main() async {
   await Future.delayed(const Duration(milliseconds: 500));
   final notificationServices = NotificationServices();
   await notificationServices.initialize();
+
+  // Test notification on app start (for debugging)
+  if (Platform.isAndroid) {
+    try {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      if (androidInfo.version.sdkInt < 26) {
+        // For older Android versions
+        // Send a test notification after a delay
+        Future.delayed(const Duration(seconds: 5), () {
+          notificationServices.showFallbackNotification(
+            title: "Test Notification",
+            body: "This is a test notification for older devices",
+          );
+        });
+      }
+    } catch (e) {
+      // Log the error
+      developer.log('❌ Error checking Android version: $e');
+    }
+  }
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([

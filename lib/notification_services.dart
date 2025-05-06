@@ -42,6 +42,10 @@ class NotificationServices {
   final String _newTicketChannelId = 'new_ticket_channel';
   final String _newTicketChannelName = 'New Ticket Notifications';
   final String _newTicketChannelDescription = 'Notifications for new tickets';
+  final String _fallbackChannelId = 'fallback_channel';
+  final String _fallbackChannelName = 'Fallback Notifications';
+  final String _fallbackChannelDescription =
+      'Used when regular notifications fail';
 
   // Initialize notification services
   Future<void> initialize() async {
@@ -70,6 +74,9 @@ class NotificationServices {
 
     // Load offline notification queue from storage
     await _loadOfflineNotificationQueue();
+
+    // Add battery optimization exemption request for older devices
+    await requestBatteryOptimizationExemption();
 
     _isInitialized = true;
     developer.log('🔔 Notification services initialized');
@@ -202,7 +209,8 @@ class NotificationServices {
   @pragma('vm:entry-point')
   Future<void> _createNotificationChannel() async {
     if (Platform.isAndroid) {
-      final AndroidNotificationChannel channel = AndroidNotificationChannel(
+      // Regular channel
+      final AndroidNotificationChannel mainChannel = AndroidNotificationChannel(
         _newTicketChannelId,
         _newTicketChannelName,
         description: _newTicketChannelDescription,
@@ -211,12 +219,25 @@ class NotificationServices {
         playSound: true,
       );
 
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(channel);
+      // Fallback channel with simpler settings for older devices
+      final AndroidNotificationChannel fallbackChannel =
+          AndroidNotificationChannel(
+        _fallbackChannelId,
+        _fallbackChannelName,
+        description: _fallbackChannelDescription,
+        importance: Importance.high,
+        enableVibration: true,
+        playSound: true,
+      );
 
-      developer.log('🔔 Android notification channel created');
+      final plugin = _localNotifications.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+
+      if (plugin != null) {
+        await plugin.createNotificationChannel(mainChannel);
+        await plugin.createNotificationChannel(fallbackChannel);
+        developer.log('🔔 Android notification channels created');
+      }
     }
   }
 
@@ -294,6 +315,7 @@ class NotificationServices {
   }
 
   // Set up connectivity monitoring
+  @pragma('vm:entry-point')
   Future<void> _setupConnectivityMonitoring() async {
     _connectivitySubscription =
         _connectivity.onConnectivityChanged.listen((ConnectivityResult result) {
@@ -331,8 +353,8 @@ class NotificationServices {
         priority: Priority.high,
         playSound: playSound,
         enableVibration: true,
-        icon: '@drawable/ic_stat_notification',
-        largeIcon: const DrawableResourceAndroidBitmap('@drawable/app_logo'),
+        // icon: '@drawable/ic_stat_notification',
+        // largeIcon: const DrawableResourceAndroidBitmap('@drawable/app_logo'),
       );
 
       final DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -383,14 +405,66 @@ class NotificationServices {
       'info': ticketInfo,
     };
 
-    await _showNotification(
-      title: title,
-      body: body,
-      payload: jsonEncode(data),
-    );
+    try {
+      await _showNotification(
+        title: title,
+        body: body,
+        payload: jsonEncode(data),
+      );
+    } catch (e) {
+      developer.log('❌ Regular notification failed, trying fallback: $e');
+      // Try fallback method
+      await showFallbackNotification(
+        title: title,
+        body: body,
+        payload: jsonEncode(data),
+      );
+    }
+  }
+
+  // Add a fallback method for older devices
+  @pragma('vm:entry-point')
+  Future<void> showFallbackNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    try {
+      // Simplified notification for older devices
+      const AndroidNotificationDetails androidDetails =
+          AndroidNotificationDetails(
+        'fallback_channel',
+        'Fallback Notifications',
+        channelDescription: 'Used when regular notifications fail',
+        importance: Importance.high,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+        // icon: '@drawable/ic_stat_notification', // Simple icon
+      );
+
+      const NotificationDetails notificationDetails = NotificationDetails(
+        android: androidDetails,
+      );
+
+      final notificationId = DateTime.now().millisecondsSinceEpoch % 100000;
+
+      await _localNotifications.show(
+        notificationId,
+        title,
+        body,
+        notificationDetails,
+        payload: payload,
+      );
+
+      developer.log('🔔 Fallback notification shown: $title');
+    } catch (e) {
+      developer.log('❌ Error showing fallback notification: $e');
+    }
   }
 
   // Queue notification for when device comes back online
+  @pragma('vm:entry-point')
   void _queueOfflineNotification(String title, String body, String? payload) {
     developer.log('📶 Device is offline, queueing notification: $title');
 
@@ -406,6 +480,7 @@ class NotificationServices {
   }
 
   // Process offline notification queue
+  @pragma('vm:entry-point')
   Future<void> _processOfflineNotificationQueue() async {
     if (_offlineNotificationQueue.isEmpty) return;
 
@@ -432,6 +507,7 @@ class NotificationServices {
   }
 
   // Save offline notification queue to storage
+  @pragma('vm:entry-point')
   Future<void> _saveOfflineNotificationQueue() async {
     try {
       final String queueJson = jsonEncode(_offlineNotificationQueue);
@@ -442,6 +518,7 @@ class NotificationServices {
   }
 
   // Load offline notification queue from storage
+  @pragma('vm:entry-point')
   Future<void> _loadOfflineNotificationQueue() async {
     try {
       final String? queueJson =
@@ -464,6 +541,7 @@ class NotificationServices {
     _connectivitySubscription?.cancel();
   }
 
+  @pragma('vm:entry-point')
   // Check if notification permissions are granted
   Future<bool> areNotificationPermissionsGranted() async {
     if (Platform.isIOS) {
@@ -529,5 +607,27 @@ class NotificationServices {
   Future<bool> requestNotificationPermissionsDirectly() async {
     developer.log('🔔 Directly requesting notification permissions');
     return await requestNotificationPermission();
+  }
+
+  // Add this method to request battery optimization exemption
+  @pragma('vm:entry-point')
+  Future<void> requestBatteryOptimizationExemption() async {
+    if (Platform.isAndroid) {
+      try {
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        // For Android 6.0+ (API level 23+)
+        if (androidInfo.version.sdkInt >= 23) {
+          final isIgnoringBatteryOptimizations =
+              await ph.Permission.ignoreBatteryOptimizations.status;
+
+          if (!isIgnoringBatteryOptimizations.isGranted) {
+            await ph.Permission.ignoreBatteryOptimizations.request();
+            developer.log('🔋 Requested battery optimization exemption');
+          }
+        }
+      } catch (e) {
+        developer.log('❌ Error requesting battery optimization exemption: $e');
+      }
+    }
   }
 }

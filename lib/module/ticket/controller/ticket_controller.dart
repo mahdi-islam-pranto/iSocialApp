@@ -767,7 +767,7 @@ class TicketController extends GetxController {
       log("Auto loading is working ::::::");
     } catch (e) {
       log("Error fetching WhatsApp conversations: $e");
-      showBasicFailedSnackBar(message: "Failed to load conversations");
+      // showBasicFailedSnackBar(message: "Failed to load conversations");
     } finally {
       loading.value = false;
     }
