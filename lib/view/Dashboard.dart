@@ -36,6 +36,7 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
   List counterKey = [];
   bool isLoading = false;
   bool isAutoRefreshing = false;
+  bool hasNotificationPermission = false;
 
   // References to child widgets using generic GlobalKey
   final postPageCounterKey = GlobalKey();
@@ -51,9 +52,28 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
 
   @override
   void initState() {
-    notificationServices.requestNotificationPermission();
     super.initState();
     getUserNameAndEmail();
+    // _checkNotificationPermission();
+
+    // Add this to force permission check on app start
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        notificationServices
+            .requestNotificationPermissionsDirectly()
+            .then((granted) {
+          setState(() {
+            hasNotificationPermission = granted;
+          });
+
+          if (granted) {
+            developer.log('🔔 Notification permission granted on app start');
+          } else {
+            developer.log('❌ Notification permission denied on app start');
+          }
+        });
+      }
+    });
 
     // Initialize auto-refresh controller
     autoRefreshController = DashboardAutoRefreshController(
@@ -65,6 +85,72 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
 
     // Start auto-refresh
     autoRefreshController.startAutoRefresh(intervalSeconds: 30);
+  }
+
+  // Check notification permission status
+  Future<void> _checkNotificationPermission() async {
+    try {
+      final hasPermission =
+          await notificationServices.areNotificationPermissionsGranted();
+      developer.log('🔔 Notification permission status: $hasPermission');
+
+      if (mounted) {
+        setState(() {
+          hasNotificationPermission = hasPermission;
+        });
+      }
+    } catch (e) {
+      developer.log('❌ Error checking notification permission: $e');
+    }
+  }
+
+  // Request notification permission
+  Future<void> _requestNotificationPermission(BuildContext context) async {
+    try {
+      developer.log('🔔 Requesting notification permission from button');
+
+      // Show a loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Requesting notification permission...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      // Request permission
+      final granted =
+          await notificationServices.requestNotificationPermission();
+
+      if (mounted) {
+        setState(() {
+          hasNotificationPermission = granted;
+        });
+
+        // Show result message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(granted
+                ? 'Notification permission granted!'
+                : 'Notification permission denied. Some features may not work properly.'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: granted ? Colors.green : Colors.orange,
+          ),
+        );
+
+        developer.log('🔔 Notification permission request result: $granted');
+      }
+    } catch (e) {
+      developer.log('❌ Error requesting notification permission: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error requesting notification permission: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -83,6 +169,45 @@ class _DashBoardScreenState extends State<DashBoardScreen> {
           elevation: 0,
           title: const AppTitleField(),
           actions: [
+            // Notification permission button
+            IconButton(
+              icon: Icon(
+                hasNotificationPermission
+                    ? Icons.notifications_active
+                    : Icons.notifications_off,
+                color: hasNotificationPermission ? Colors.green : Colors.red,
+                size: 20.0,
+              ),
+              tooltip: 'Enable Notifications',
+              onPressed: () => _requestNotificationPermission(context),
+            ),
+
+            // ElevatedButton.icon(
+            //   icon: Icon(
+            //     hasNotificationPermission
+            //         ? Icons.notifications_active
+            //         : Icons.notifications_off,
+            //     color: hasNotificationPermission ? Colors.green : Colors.red,
+            //     size: 20.0,
+            //   ),
+            //   label: Text(
+            //     hasNotificationPermission ? "Enabled" : "Enable Notifications",
+            //     style: TextStyle(
+            //       fontSize: 12.sp,
+            //       color: hasNotificationPermission ? Colors.green : Colors.red,
+            //     ),
+            //   ),
+            //   style: ElevatedButton.styleFrom(
+            //     backgroundColor: Colors.white,
+            //     elevation: hasNotificationPermission ? 0 : 2,
+            //     padding:
+            //         const EdgeInsets.symmetric(horizontal: 8.0, vertical: 0),
+            //     minimumSize: Size.zero,
+            //     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            //   ),
+            //   onPressed: () => _requestNotificationPermission(context),
+            // ),
+            SizedBox(width: 8.w),
             // Manual refresh button
             IconButton(
               icon: const Icon(Icons.refresh),

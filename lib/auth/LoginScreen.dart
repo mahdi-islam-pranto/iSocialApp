@@ -476,6 +476,17 @@ class _loginPageState extends State<LoginScreen> {
           sharedPreferences.setString("token_expire_date",
               data['data']['token_expire_date'].toString());
 
+          // Get notification services instance
+          final notificationServices = NotificationServices();
+
+          // Request notification permission with proper UI context
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              notificationServices
+                  .checkAndRequestNotificationPermissions(context);
+            }
+          });
+
           // Set real time counter dashboard height
           if (data['data']['role'] == "admin") {
             //admin

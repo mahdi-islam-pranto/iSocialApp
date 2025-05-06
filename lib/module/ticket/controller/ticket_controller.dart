@@ -872,9 +872,9 @@ class TicketController extends GetxController {
       } else {
         log("API call failed: ${defaultResponse.response['message']}");
         if (!isAutoRefresh) {
-          showBasicFailedSnackBar(
-              message: defaultResponse.response['message'] ??
-                  "Failed to fetch data.");
+          // showBasicFailedSnackBar(
+          //     message: defaultResponse.response['message'] ??
+          //         "Failed to fetch data.");
         }
       }
     } catch (e, stackTrace) {

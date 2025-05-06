@@ -75,6 +75,8 @@ dependencies:
   connectivity_plus: ^5.0.2
   rxdart: ^0.27.7
   workmanager: ^0.5.2
+  device_info_plus: ^9.0.0
+
 
 
 # dependency_overrides:

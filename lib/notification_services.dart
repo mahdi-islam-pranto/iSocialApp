@@ -2,13 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
-
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:isocial/storage/sharedPrefs.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:rxdart/rxdart.dart';
 
 // Define a top-level function for background message handling
@@ -74,51 +75,113 @@ class NotificationServices {
     developer.log('🔔 Notification services initialized');
   }
 
+  @pragma('vm:entry-point')
   // Request notification permission
-  Future<void> requestNotificationPermission() async {
-    NotificationSettings settings = await _messaging.requestPermission(
-        alert: true,
-        badge: true,
-        announcement: true,
-        carPlay: true,
-        criticalAlert: true,
-        sound: true,
-        provisional: true);
+  Future<bool> requestNotificationPermission() async {
+    bool permissionGranted = false;
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      developer.log('🔔 User granted notification permission');
-    } else if (settings.authorizationStatus ==
-        AuthorizationStatus.provisional) {
-      developer.log('🔔 User granted provisional notification permission');
-    } else {
-      developer.log('❌ User denied notification permission');
+    // For Android 13+ (API 33+), we need to request POST_NOTIFICATIONS permission
+    if (Platform.isAndroid) {
+      try {
+        // Check Android version at runtime
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        final sdkInt = androidInfo.version.sdkInt;
+
+        developer.log('🔔 Android SDK version: $sdkInt');
+
+        // Android 13 is API level 33
+        if (sdkInt >= 33) {
+          final status = await ph.Permission.notification.status;
+          developer.log('🔔 Current notification permission status: $status');
+
+          if (!status.isGranted) {
+            developer.log('🔔 Requesting Android 13+ notification permission');
+            final result = await ph.Permission.notification.request();
+            developer
+                .log('🔔 Android 13+ notification permission result: $result');
+            permissionGranted = result.isGranted;
+          } else {
+            permissionGranted = true;
+            developer.log('🔔 Notification permission already granted');
+          }
+        } else {
+          // For older Android versions, permissions are granted at install time
+          permissionGranted = true;
+          developer.log(
+              '🔔 Older Android version, permission granted at install time');
+        }
+      } catch (e) {
+        developer.log('❌ Error checking Android version: $e');
+        // Try to request permission anyway
+        try {
+          final result = await ph.Permission.notification.request();
+          permissionGranted = result.isGranted;
+          developer.log('🔔 Fallback notification permission result: $result');
+        } catch (e) {
+          developer.log('❌ Error requesting notification permission: $e');
+        }
+      }
     }
+
+    // Firebase messaging permission request (works for iOS and older Android)
+    try {
+      NotificationSettings settings = await _messaging.requestPermission(
+          alert: true,
+          badge: true,
+          announcement: true,
+          carPlay: true,
+          criticalAlert: true,
+          sound: true,
+          provisional: false); // Changed to false for more explicit permission
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        developer.log('🔔 User granted notification permission');
+        permissionGranted = true;
+      } else if (settings.authorizationStatus ==
+          AuthorizationStatus.provisional) {
+        developer.log('🔔 User granted provisional notification permission');
+        permissionGranted = true;
+      } else {
+        developer.log('❌ User denied notification permission');
+        permissionGranted = false;
+      }
+    } catch (e) {
+      developer.log('❌ Error requesting Firebase notification permission: $e');
+    }
+
+    return permissionGranted;
   }
 
   // Get device token for FCM
   Future<String?> getDeviceToken() async {
     String? token = await _messaging.getToken();
     if (token != null) {
-      // Save token to shared preferences
-      await SharedPrefs.setString('fcm_token', token);
-      developer.log('🔔 FCM Token: $token');
+      try {
+        // Save token to shared preferences
+        await SharedPrefs.setString('fcm_token', token);
+        developer.log('🔔 FCM Token: $token');
+      } catch (e) {
+        developer.log('❌ Error saving FCM token: $e');
+        // Continue even if we can't save the token
+      }
     }
     return token;
   }
 
   // Initialize local notifications
+  @pragma('vm:entry-point')
   Future<void> _initializeLocalNotifications() async {
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@drawable/ic_stat_notification');
 
-    final DarwinInitializationSettings iosSettings =
+    const DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
 
-    final InitializationSettings initSettings = InitializationSettings(
+    const InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
@@ -136,6 +199,7 @@ class NotificationServices {
   }
 
   // Create notification channel for Android
+  @pragma('vm:entry-point')
   Future<void> _createNotificationChannel() async {
     if (Platform.isAndroid) {
       final AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -156,6 +220,7 @@ class NotificationServices {
     }
   }
 
+  @pragma('vm:entry-point')
   // Set up foreground notification handling
   void _setupForegroundNotificationHandling() {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -169,6 +234,7 @@ class NotificationServices {
   }
 
   // Set up notification click handling
+  @pragma('vm:entry-point')
   void _setupNotificationClickHandling() {
     // Handle notification click when app is in background/terminated
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
@@ -200,6 +266,7 @@ class NotificationServices {
   }
 
   // Handle notification click
+  @pragma('vm:entry-point')
   void _handleNotificationClick(Map<String, dynamic> data) {
     developer.log('🔔 Handling notification click with data: $data');
 
@@ -238,6 +305,7 @@ class NotificationServices {
     });
   }
 
+  @pragma('vm:entry-point')
   // Show notification
   Future<void> _showNotification({
     required String title,
@@ -296,6 +364,8 @@ class NotificationServices {
       _queueOfflineNotification(title, body, payload);
     }
   }
+
+  @pragma('vm:entry-point')
 
   // Show new ticket notification
   Future<void> showNewTicketNotification({
@@ -392,5 +462,72 @@ class NotificationServices {
   void dispose() {
     _selectNotificationSubject.close();
     _connectivitySubscription?.cancel();
+  }
+
+  // Check if notification permissions are granted
+  Future<bool> areNotificationPermissionsGranted() async {
+    if (Platform.isIOS) {
+      final settings = await _messaging.getNotificationSettings();
+      return settings.authorizationStatus == AuthorizationStatus.authorized;
+    } else if (Platform.isAndroid) {
+      // For Android 13+, check notification permission
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      if (androidInfo.version.sdkInt >= 33) {
+        return await ph.Permission.notification.isGranted;
+      }
+      // For older Android versions, permissions are granted at install time
+      return true;
+    }
+    return false;
+  }
+
+  @pragma('vm:entry-point')
+  // Call this method from your dashboard or wherever appropriate
+  Future<bool> checkAndRequestNotificationPermissions(
+      BuildContext context) async {
+    // Check if context is still valid
+    if (!context.mounted) return false;
+
+    final hasPermissions = await areNotificationPermissionsGranted();
+    developer.log('🔔 Current notification permission status: $hasPermissions');
+
+    if (!hasPermissions) {
+      // Check again if context is still valid after the async operation
+      if (!context.mounted) return false;
+
+      // Show a dialog explaining why notifications are important
+      final shouldRequest = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Enable Notifications'),
+              content: const Text(
+                  'To receive important updates and alerts, please enable notifications for this app.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Not Now'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Enable'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+
+      if (shouldRequest && context.mounted) {
+        return await requestNotificationPermission();
+      }
+      return false;
+    }
+    return true;
+  }
+
+  // Method to directly request permissions without confirmation dialog
+  @pragma('vm:entry-point')
+  Future<bool> requestNotificationPermissionsDirectly() async {
+    developer.log('🔔 Directly requesting notification permissions');
+    return await requestNotificationPermission();
   }
 }

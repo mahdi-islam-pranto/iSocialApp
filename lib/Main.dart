@@ -8,6 +8,7 @@ import 'package:isocial/storage/sharedPrefs.dart';
 import 'package:provider/provider.dart';
 import 'controllers/Controller.dart';
 import 'SplashScreen.dart';
+import 'notification_services.dart';
 
 /*
   Activity name : Main activity
@@ -28,6 +29,11 @@ void main() async {
 
   // Initialize SharedPrefs
   await SharedPrefs.init();
+
+  // Initialize notification services with a slight delay to ensure Firebase is fully ready
+  await Future.delayed(const Duration(milliseconds: 500));
+  final notificationServices = NotificationServices();
+  await notificationServices.initialize();
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
