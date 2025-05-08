@@ -6,9 +6,11 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:isocial/storage/sharedPrefs.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:rxdart/rxdart.dart';
 
@@ -209,14 +211,16 @@ class NotificationServices {
   @pragma('vm:entry-point')
   Future<void> _createNotificationChannel() async {
     if (Platform.isAndroid) {
-      // Regular channel
+      // Regular channel with custom sound
       final AndroidNotificationChannel mainChannel = AndroidNotificationChannel(
         _newTicketChannelId,
         _newTicketChannelName,
         description: _newTicketChannelDescription,
-        importance: Importance.high,
+        importance: Importance.max, // Use max importance
         enableVibration: true,
+        enableLights: true,
         playSound: true,
+        sound: const RawResourceAndroidNotificationSound('notification_sound'),
       );
 
       // Fallback channel with simpler settings for older devices
@@ -225,9 +229,11 @@ class NotificationServices {
         _fallbackChannelId,
         _fallbackChannelName,
         description: _fallbackChannelDescription,
-        importance: Importance.high,
+        importance: Importance.max, // Use max importance
         enableVibration: true,
+        enableLights: true,
         playSound: true,
+        sound: const RawResourceAndroidNotificationSound('notification_sound'),
       );
 
       final plugin = _localNotifications.resolvePlatformSpecificImplementation<
@@ -236,7 +242,8 @@ class NotificationServices {
       if (plugin != null) {
         await plugin.createNotificationChannel(mainChannel);
         await plugin.createNotificationChannel(fallbackChannel);
-        developer.log('🔔 Android notification channels created');
+        developer
+            .log('🔔 Android notification channels created with custom sound');
       }
     }
   }
@@ -244,9 +251,14 @@ class NotificationServices {
   @pragma('vm:entry-point')
   // Set up foreground notification handling
   void _setupForegroundNotificationHandling() {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
       developer.log('🔔 Foreground message received: ${message.messageId}');
-      _showNotification(
+
+      // Play sound directly for immediate audio feedback
+      await playNotificationSound();
+
+      // Also show the notification with sound
+      await _showNotification(
         title: message.notification?.title ?? 'New Notification',
         body: message.notification?.body ?? '',
         payload: jsonEncode(message.data),
@@ -349,10 +361,14 @@ class NotificationServices {
         _newTicketChannelId,
         _newTicketChannelName,
         channelDescription: _newTicketChannelDescription,
-        importance: Importance.high,
-        priority: Priority.high,
+        importance: Importance.max,
+        priority: Priority.max,
         playSound: playSound,
         enableVibration: true,
+        enableLights: true,
+        audioAttributesUsage:
+            AudioAttributesUsage.alarm, // Use alarm volume level
+        sound: const RawResourceAndroidNotificationSound('notification_sound'),
         // icon: '@drawable/ic_stat_notification',
         // largeIcon: const DrawableResourceAndroidBitmap('@drawable/app_logo'),
       );
@@ -361,6 +377,7 @@ class NotificationServices {
         presentAlert: true,
         presentBadge: true,
         presentSound: playSound,
+        sound: 'notification_sound.mp3',
       );
 
       final NotificationDetails notificationDetails = NotificationDetails(
@@ -406,6 +423,10 @@ class NotificationServices {
     };
 
     try {
+      // Play sound directly for immediate audio feedback
+      await playNotificationSound();
+
+      // Also show the notification with sound
       await _showNotification(
         title: title,
         body: body,
@@ -413,7 +434,9 @@ class NotificationServices {
       );
     } catch (e) {
       developer.log('❌ Regular notification failed, trying fallback: $e');
-      // Try fallback method
+      // Try fallback method with direct sound
+      await playNotificationSound();
+
       await showFallbackNotification(
         title: title,
         body: body,
@@ -436,10 +459,14 @@ class NotificationServices {
         'fallback_channel',
         'Fallback Notifications',
         channelDescription: 'Used when regular notifications fail',
-        importance: Importance.high,
-        priority: Priority.high,
+        importance: Importance.max,
+        priority: Priority.max,
         playSound: true,
         enableVibration: true,
+        enableLights: true,
+        audioAttributesUsage:
+            AudioAttributesUsage.alarm, // Use alarm volume level
+        sound: RawResourceAndroidNotificationSound('notification_sound'),
         // icon: '@drawable/ic_stat_notification', // Simple icon
       );
 
@@ -535,6 +562,29 @@ class NotificationServices {
     }
   }
 
+  // Play notification sound directly using just_audio
+  Future<void> playNotificationSound() async {
+    try {
+      final player = AudioPlayer();
+      // Set volume to maximum
+      await player.setVolume(1.0);
+      // Load and play the sound
+      await player.setAsset('assets/sounds/notification_sound.mp3');
+      await player.play();
+
+      // Dispose player after playing
+      player.playerStateStream.listen((state) {
+        if (state.processingState == ProcessingState.completed) {
+          player.dispose();
+        }
+      });
+
+      developer.log('🔊 Playing notification sound directly');
+    } catch (e) {
+      developer.log('❌ Error playing notification sound: $e');
+    }
+  }
+
   // Dispose resources
   void dispose() {
     _selectNotificationSubject.close();
@@ -607,6 +657,23 @@ class NotificationServices {
   Future<bool> requestNotificationPermissionsDirectly() async {
     developer.log('🔔 Directly requesting notification permissions');
     return await requestNotificationPermission();
+  }
+
+  // Test notification sound
+  Future<void> testNotificationSound() async {
+    developer.log('🔊 Testing notification sound');
+
+    // Play sound directly first
+    await playNotificationSound();
+
+    // Then show a test notification
+    await _showNotification(
+      title: 'Sound Test',
+      body: 'This is a test notification with sound',
+      payload: jsonEncode({'type': 'test'}),
+    );
+
+    developer.log('🔊 Test notification sent');
   }
 
   // Add this method to request battery optimization exemption

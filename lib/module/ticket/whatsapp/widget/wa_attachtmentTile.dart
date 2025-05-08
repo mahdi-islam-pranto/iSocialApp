@@ -12,6 +12,7 @@ import '../../../../utilities/permission_service.dart';
 import '../../../ticket/view/widget/full_screen_image_view.dart';
 import '../../view/widget/audio_player_widget.dart';
 import '../../view/widget/video_player_widget.dart';
+import '../../view/widget/wa_video_player.dart';
 import '../model/wa_conversation_model.dart';
 
 class WaAttachmentTile extends StatelessWidget {
@@ -152,9 +153,9 @@ class WaAttachmentTile extends StatelessWidget {
     final url = waUserConversation!.localUrl.toString();
     print("url:....${ApiUrls.whatsAppBaseUrl + url}");
     String fileName = waUserConversation!.type.toString();
-    return VideoPlayerWidget(
-      videoUrl: "${ApiUrls.whatsAppBaseUrl + url}",
-      fileName: fileName,
+    return WaVideoPlayer(
+      wa_videoUrl: "${ApiUrls.whatsAppBaseUrl + url}",
+      wa_fileName: fileName,
     );
   }
 
@@ -279,7 +280,7 @@ class WaAttachmentTile extends StatelessWidget {
         }
 
         // Create file name
-        String fileName = fileUrl.split('/').last;
+        String fileName = waUserConversation!.localUrl!.split('/').last;
         String filePath = '${directory.path}/$fileName';
 
         // Write the file
